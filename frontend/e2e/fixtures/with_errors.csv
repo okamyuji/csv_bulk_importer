@@ -1,0 +1,6 @@
+recorded_on,customer_code,product_code,quantity,unit_price,amount,memo
+2026-04-01,C001,P001,2,100.50,201.00,ok
+2026-04-02,C002,P001,3,100.50,301.50,ok
+not-a-date,CX,PX,1,100,100,bad_date
+2026-04-05,C005,P003,-2,50,100,neg_quantity
+2026-04-06,C006,P003,2,abc,100,bad_price

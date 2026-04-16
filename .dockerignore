@@ -1,0 +1,55 @@
+# Git
+/.git/
+/.gitignore
+
+# Bundler
+/.bundle
+
+# Env / secrets
+/.env*
+/config/master.key
+/config/credentials/*.key
+
+# Logs and temp
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+/tmp/pids/*
+!/tmp/pids/.keep
+
+# Storage (dev uploads / SQLite)
+/storage/*
+!/storage/.keep
+/tmp/storage/*
+!/tmp/storage/.keep
+
+# Frontend node_modules (rebuilt in frontend stage)
+/frontend/node_modules/
+/frontend/dist/
+
+# Rails asset builds
+/node_modules/
+/app/assets/builds/*
+!/app/assets/builds/.keep
+/public/assets
+
+# CI / IDE / Docker meta
+/.github
+/.devcontainer
+/.dockerignore
+/Dockerfile*
+/docker-compose.yml
+/docker/
+
+# Terraform
+/infra/
+
+# Test artifacts
+/coverage/
+/spec/
+/frontend/e2e/
+/frontend/test-results/
+
+# Sorbet development files
+/sorbet/tapioca/

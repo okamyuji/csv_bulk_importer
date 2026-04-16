@@ -1,0 +1,24 @@
+---
+EnableDefaultLinters: true
+exclude:
+  - "frontend/**/*"
+  - "node_modules/**/*"
+  - "vendor/**/*"
+  - "sorbet/**/*"
+linters:
+  AllowedScriptType:
+    enabled: true
+    allowed_types:
+      - text/javascript
+      - application/json
+      - application/ld+json
+  ErbSafety:
+    enabled: true
+  NoJavascriptTagHelper:
+    enabled: false
+  SpaceAroundErbTag:
+    enabled: true
+  FinalNewline:
+    enabled: true
+  Rubocop:
+    enabled: false
