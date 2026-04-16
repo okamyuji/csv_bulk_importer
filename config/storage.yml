@@ -1,0 +1,21 @@
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>
+
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+amazon_localstack:
+  service: S3
+  endpoint: <%= ENV.fetch("S3_ENDPOINT", "http://localhost:4566") %>
+  force_path_style: true
+  access_key_id: <%= ENV.fetch("AWS_ACCESS_KEY_ID", "test") %>
+  secret_access_key: <%= ENV.fetch("AWS_SECRET_ACCESS_KEY", "test") %>
+  region: <%= ENV.fetch("AWS_REGION", "us-east-1") %>
+  bucket: <%= ENV.fetch("S3_BUCKET", "csv-bulk-importer-dev") %>
+
+amazon:
+  service: S3
+  region: <%= ENV.fetch("AWS_REGION", "us-east-1") %>
+  bucket: <%= ENV.fetch("S3_BUCKET", "csv-bulk-importer-dev-csv-uploads") %>

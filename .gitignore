@@ -1,0 +1,68 @@
+# Ruby / Bundler
+/.bundle/
+/vendor/bundle/
+
+# Rails
+/log/*
+!/log/.keep
+/tmp/*
+!/tmp/.keep
+/storage/*
+!/storage/.keep
+/public/assets/
+/public/packs/
+
+# Credentials (keep encrypted files, ignore keys)
+/config/master.key
+/config/credentials/*.key
+
+# Database
+/db/*.sqlite3
+/db/*.sqlite3-*
+
+# Environment
+.env
+.env.*
+!.env.test
+
+# Node / Frontend
+/node_modules/
+/frontend/node_modules/
+/frontend/dist/
+/frontend/test-results/
+/frontend/playwright-report/
+
+# Coverage
+/coverage/
+
+# Sorbet
+/sorbet/tapioca/require.rb
+
+# Tapioca cache
+/.cache/
+
+# Terraform
+/infra/terraform/envs/*/.terraform/
+/infra/terraform/envs/*/.terraform.lock.hcl
+/infra/terraform/envs/*/tfplan
+/infra/terraform/envs/*/*.tfstate
+/infra/terraform/envs/*/*.tfstate.backup
+/infra/terraform/envs/*/terraform.tfvars
+
+# Docker
+/.dockerignore.bak
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Playwright MCP
+.playwright-mcp/

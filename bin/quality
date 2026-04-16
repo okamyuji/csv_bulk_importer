@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Run the full quality suite against the entire repo (not just staged files).
+# Use this before pushing or in CI. Pre-commit hooks run only on staged files.
+
+set -u
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+pass=0
+fail=0
+log=""
+
+run() {
+  local name="$1"
+  shift
+  echo ""
+  echo "▸ ${name}"
+  if "$@"; then
+    pass=$((pass + 1))
+    log+="✓ ${name}\n"
+  else
+    fail=$((fail + 1))
+    log+="✗ ${name}\n"
+  fi
+}
+
+run "rubocop"     bundle exec rubocop --parallel
+run "syntax_tree" bash -c 'bundle exec stree check $(git ls-files -co --exclude-standard | grep -E "\\.(rb|rake|ru)$" | grep -v "^sorbet/" | grep -v "^db/migrate/")'
+run "sorbet"      bundle exec srb tc
+run "erb_lint"    bundle exec erb_lint --lint-all
+
+if [ -d frontend ]; then
+  run "eslint"     pnpm --dir frontend run lint
+  run "prettier"   pnpm --dir frontend run format:check
+  run "typescript" pnpm --dir frontend run typecheck
+  run "stylelint"  pnpm --dir frontend run stylelint
+fi
+
+echo ""
+echo "=== summary ==="
+printf "${log}"
+echo "pass=${pass} fail=${fail}"
+
+exit $fail

@@ -1,0 +1,29 @@
+services:
+  localstack:
+    image: localstack/localstack:3.8
+    container_name: csv-bulk-importer-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3
+      DEFAULT_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+      PERSISTENCE: "1"
+      LS_LOG: warn
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - ./docker/localstack/init:/etc/localstack/init/ready.d
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - mysql8_default
+
+volumes:
+  localstack_data:
+
+networks:
+  mysql8_default:
+    external: true

@@ -1,0 +1,42 @@
+inherit_gem:
+  rubocop-rails-omakase: rubocop.yml
+
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.4
+  Exclude:
+    - "bin/**/*"
+    - "db/schema.rb"
+    - "db/migrate/**/*"
+    - "node_modules/**/*"
+    - "frontend/**/*"
+    - "sorbet/**/*"
+    - "storage/**/*"
+    - "tmp/**/*"
+    - "vendor/**/*"
+
+# Syntax Tree owns formatting (.streerc); disable RuboCop layout + style rules that conflict.
+Layout:
+  Enabled: false
+
+# Line length: keep omakase default but allow long test descriptions.
+Layout/LineLength:
+  Enabled: false
+
+# Syntax Tree enforces trailing commas via plugin; silence RuboCop counterparts.
+Style/TrailingCommaInArrayLiteral:
+  Enabled: false
+Style/TrailingCommaInHashLiteral:
+  Enabled: false
+Style/TrailingCommaInArguments:
+  Enabled: false
+
+# Sorbet sig-heavy style pushes classes over default.
+Metrics/ClassLength:
+  Max: 300
+Metrics/ModuleLength:
+  Max: 300
+Metrics/MethodLength:
+  Max: 40
+Metrics/AbcSize:
+  Max: 40
