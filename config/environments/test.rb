@@ -50,4 +50,11 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Bullet — N+1クエリ検知（テスト時は例外を投げる）
+  config.after_initialize do
+    Bullet.enable = true
+    Bullet.raise = true
+    Bullet.add_safelist type: :unused_eager_loading, class_name: "ActiveStorage::Attachment", association: :record
+  end
 end
