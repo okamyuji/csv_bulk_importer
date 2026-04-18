@@ -26,7 +26,7 @@ export function ImportDetail() {
   const lastEvent = events[events.length - 1];
 
   const imp = data?.data;
-  const chunks = data?.chunks ?? [];
+  const chunks = useMemo(() => data?.chunks ?? [], [data?.chunks]);
 
   const hasFailedChunk = useMemo(
     () => chunks.some((c) => c.status === "failed"),
