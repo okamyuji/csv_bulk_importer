@@ -71,8 +71,11 @@ module Api
       private
 
       def build_idempotency_key(file)
+        # 秒単位だと同一秒内の再送で衝突し得るため、マイクロ秒（%s%6N）まで含めて
+        # 衝突確率を下げる。プラットフォーム依存の Time#to_f ではなく、明示フォーマットを使う
         user = T.must(current_user)
-        Digest::SHA256.hexdigest("#{user.id}|#{file.original_filename}|#{file.size}|#{Time.current.to_f}")
+        timestamp = Time.current.strftime("%s%6N")
+        Digest::SHA256.hexdigest("#{user.id}|#{file.original_filename}|#{file.size}|#{timestamp}")
       end
     end
   end
