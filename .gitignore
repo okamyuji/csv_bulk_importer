@@ -37,6 +37,10 @@
 
 # Sorbet
 /sorbet/tapioca/require.rb
+# Tapioca が自動生成する gem RBI は、AWS SDK などのサンプル JWT が
+# GitHub の secret scanner に誤検知されるため、コミット対象から除外する。
+# 各開発者は setup 時に `bundle exec tapioca gems` で再生成すること。
+/sorbet/rbi/gems/
 
 # Tapioca cache
 /.cache/

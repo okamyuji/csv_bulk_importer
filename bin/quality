@@ -24,6 +24,12 @@ run() {
   fi
 }
 
+# sorbet/rbi/gems は .gitignore 対象のため、欠けていれば tapioca で生成しておく
+if [ ! -d "sorbet/rbi/gems" ] || [ -z "$(ls -A sorbet/rbi/gems 2>/dev/null)" ]; then
+  echo "▸ tapioca gems (sorbet/rbi/gems が空なので生成します)"
+  bundle exec tapioca gems
+fi
+
 run "rubocop"     bundle exec rubocop --parallel
 run "syntax_tree" bash -c 'bundle exec stree check $(git ls-files -co --exclude-standard | grep -E "\\.(rb|rake|ru)$" | grep -v "^sorbet/" | grep -v "^db/migrate/")'
 run "sorbet"      bundle exec srb tc

@@ -41,6 +41,9 @@ class DeviseController
 
     sig { params(actions: T.untyped, options: T.untyped).void }
     def skip_before_action(*actions, **options); end
+
+    sig { params(options: T.untyped).void }
+    def protect_from_forgery(**options); end
   end
 
   sig { returns(ActionDispatch::Request) }

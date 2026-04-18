@@ -7,12 +7,17 @@ SHELL := /bin/bash
 .PHONY: setup
 setup: ## Initial setup (bundle, pnpm, db, docker, hooks)
 	bundle install
+	bundle exec tapioca gems
 	docker compose up -d
 	@echo "Waiting for LocalStack…" && sleep 5
 	bin/rails db:prepare
 	pnpm --dir frontend install --frozen-lockfile
 	lefthook install
 	@echo "✓ Setup complete. Run 'make dev' to start."
+
+.PHONY: rbi
+rbi: ## Regenerate gem RBI files via Tapioca
+	bundle exec tapioca gems
 
 # ---------------------------------------------------------------------------
 # Development
