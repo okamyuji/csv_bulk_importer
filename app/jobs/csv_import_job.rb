@@ -24,7 +24,15 @@ class CsvImportJob < ApplicationJob
       end
 
     CsvImport.transaction do
-      csv_import.update!(status: "processing", total_rows: result.total_rows, total_chunks: result.total_chunks)
+      csv_import.update!(
+        status: "processing",
+        total_rows: result.total_rows,
+        total_chunks: result.total_chunks,
+        # 「未完了チャンク数」カウンタを総チャンク数で初期化する。
+        # 最後のチャンク完了時にFinalizerを1回だけ起動するために使う
+        # (CsvImport#finish_one_chunk!を参照)
+        remaining_chunks: result.total_chunks,
+      )
 
       result.chunks.each do |c|
         csv_import.csv_import_chunks.create!(
@@ -39,7 +47,10 @@ class CsvImportJob < ApplicationJob
 
     broadcast_split_started(csv_import)
 
-    csv_import.csv_import_chunks.order(:chunk_index).pluck(:id).each { |cid| CsvChunkJob.perform_later(cid) }
+    # チャンクジョブをbulk enqueueし、Solid QueueへのINSERTを
+    # 1ラウンドトリップにまとめる。
+    chunk_ids = csv_import.csv_import_chunks.order(:chunk_index).pluck(:id)
+    ActiveJob.perform_all_later(chunk_ids.map { |cid| CsvChunkJob.new(cid) })
   rescue StandardError => e
     CsvImport.where(id: csv_import_id).update_all(status: "failed", error_message: e.message)
     AuditLogger.event("csv_import.splitting_failed", error_class: e.class.name, error_message: e.message[0, 200])

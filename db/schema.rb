@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_15_235632) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_24_223225) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -70,6 +70,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_15_235632) do
     t.string "file_name", null: false
     t.string "idempotency_key", null: false
     t.integer "processed_rows", default: 0, null: false
+    t.integer "remaining_chunks", default: 0, null: false
     t.string "s3_prefix"
     t.string "status", default: "pending", null: false
     t.string "target_kind", null: false

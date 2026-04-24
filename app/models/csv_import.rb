@@ -25,4 +25,20 @@ class CsvImport < ApplicationRecord
   def s3_prefix_or_default
     s3_prefix.presence || "csv_imports/#{id}"
   end
+
+  # remaining_chunksをアトミックに1減らし、自分の呼び出しでカウンタが
+  # 0に到達した場合だけtrueを返す。CsvChunkJobから呼び出して、
+  # CsvImportFinalizerJobをチャンクごとではなくインポートあたり1回だけ
+  # 起動するために使う。
+  #
+  # 行ロックで並行デクリメントを直列化するため、at-least-once配信下でも
+  # 「0を観測した」と判断するのは必ず1人のワーカーだけになる。
+  def finish_one_chunk!
+    with_lock do
+      next false if remaining_chunks <= 0
+
+      decrement!(:remaining_chunks)
+      remaining_chunks.zero?
+    end
+  end
 end

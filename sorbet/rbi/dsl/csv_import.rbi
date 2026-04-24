@@ -1045,6 +1045,51 @@ class CsvImport
     sig { void }
     def processed_rows_will_change!; end
 
+    sig { returns(::Integer) }
+    def remaining_chunks; end
+
+    sig { params(value: ::Integer).returns(::Integer) }
+    def remaining_chunks=(value); end
+
+    sig { returns(T::Boolean) }
+    def remaining_chunks?; end
+
+    sig { returns(T.nilable(::Integer)) }
+    def remaining_chunks_before_last_save; end
+
+    sig { returns(T.untyped) }
+    def remaining_chunks_before_type_cast; end
+
+    sig { returns(T::Boolean) }
+    def remaining_chunks_came_from_user?; end
+
+    sig { returns(T.nilable([::Integer, ::Integer])) }
+    def remaining_chunks_change; end
+
+    sig { returns(T.nilable([::Integer, ::Integer])) }
+    def remaining_chunks_change_to_be_saved; end
+
+    sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
+    def remaining_chunks_changed?(from: T.unsafe(nil), to: T.unsafe(nil)); end
+
+    sig { returns(T.nilable(::Integer)) }
+    def remaining_chunks_in_database; end
+
+    sig { returns(T.nilable([::Integer, ::Integer])) }
+    def remaining_chunks_previous_change; end
+
+    sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
+    def remaining_chunks_previously_changed?(from: T.unsafe(nil), to: T.unsafe(nil)); end
+
+    sig { returns(T.nilable(::Integer)) }
+    def remaining_chunks_previously_was; end
+
+    sig { returns(T.nilable(::Integer)) }
+    def remaining_chunks_was; end
+
+    sig { void }
+    def remaining_chunks_will_change!; end
+
     sig { void }
     def restore_created_at!; end
 
@@ -1068,6 +1113,9 @@ class CsvImport
 
     sig { void }
     def restore_processed_rows!; end
+
+    sig { void }
+    def restore_remaining_chunks!; end
 
     sig { void }
     def restore_s3_prefix!; end
@@ -1182,6 +1230,12 @@ class CsvImport
 
     sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
     def saved_change_to_processed_rows?(from: T.unsafe(nil), to: T.unsafe(nil)); end
+
+    sig { returns(T.nilable([::Integer, ::Integer])) }
+    def saved_change_to_remaining_chunks; end
+
+    sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
+    def saved_change_to_remaining_chunks?(from: T.unsafe(nil), to: T.unsafe(nil)); end
 
     sig { returns(T.nilable([T.nilable(::String), T.nilable(::String)])) }
     def saved_change_to_s3_prefix; end
@@ -1518,6 +1572,9 @@ class CsvImport
 
     sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
     def will_save_change_to_processed_rows?(from: T.unsafe(nil), to: T.unsafe(nil)); end
+
+    sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
+    def will_save_change_to_remaining_chunks?(from: T.unsafe(nil), to: T.unsafe(nil)); end
 
     sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
     def will_save_change_to_s3_prefix?(from: T.unsafe(nil), to: T.unsafe(nil)); end

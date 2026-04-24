@@ -76,10 +76,20 @@ class CsvChunkJob < ApplicationJob
     )
 
     broadcast_chunk_completed(chunk)
-    CsvImportFinalizerJob.perform_later(csv_import.id)
+    # remaining_chunksを0にしたワーカーだけがFinalizerを起動する。
+    # これでFinalizerのenqueue/実行回数がインポートあたり1回に収まる。
+    CsvImportFinalizerJob.perform_later(csv_import.id) if csv_import.finish_one_chunk!
   rescue ActiveRecord::RecordNotFound
     raise
   rescue StandardError => e
+    # 致命的エラー時はremaining_chunksをデクリメントする成功パスを通らない。
+    # ここで明示的にデクリメントしないと、全チャンクが失敗した場合に
+    # Finalizerが起動せずインポートのステータスがfailedに確定しない。
+    csv_import_id = chunk&.csv_import_id
+    if csv_import_id
+      csv_import = CsvImport.find_by(id: csv_import_id)
+      CsvImportFinalizerJob.perform_later(csv_import_id) if csv_import&.finish_one_chunk!
+    end
     # Rails' JSON column attribute handles serialization, so pass a plain array.
     CsvImportChunk.where(id: chunk_id).update_all(
       status: "failed",

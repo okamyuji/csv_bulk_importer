@@ -145,6 +145,34 @@ make e2e
 make quality
 ```
 
+## ベンチマークの実行方法
+
+`lib/tasks/csv_import_benchmark.rake`に、合成CSVを生成して`CsvImportJob`をinline実行する計測タスクを用意しています。LocalStack（S3）とMySQLが起動している前提で、以下のコマンドで再現できます。
+
+```bash
+docker compose up -d
+bin/rails db:prepare
+
+# 10万行
+SERVICE_TYPE=amazon_localstack ACTIVE_STORAGE_SERVICE=amazon_localstack \
+  bundle exec rake "csv_import:benchmark[100000]"
+
+# 100万行（LocalStackのCRC32検証を回避するため環境変数を追加）
+SERVICE_TYPE=amazon_localstack ACTIVE_STORAGE_SERVICE=amazon_localstack \
+AWS_REQUEST_CHECKSUM_CALCULATION=when_required \
+AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \
+  bundle exec rake "csv_import:benchmark[1000000]"
+```
+
+タスクは以下の項目を出力します。
+
+- 合計時間とスループット（行/秒）
+- 開始時と終了時のRSS（メガバイト単位）
+- `ActiveJob.perform_all_later`の呼び出し回数（チャンク数によらず1回）
+- `CsvImportFinalizerJob.perform_later`の呼び出し回数（インポート1件あたり1回）
+
+inline adapterによる完全直列実行のため、Solid Queueでthreads/processesを増やしたときの並列化効果は別途計測してください。
+
 ## 本番イメージのビルド方法
 
 以下のコマンドで、webとworkerの2つのDockerイメージをビルドできます。

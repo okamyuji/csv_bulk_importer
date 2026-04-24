@@ -12,7 +12,13 @@ class CsvImportRetryService
       chunk_ids = []
 
       CsvImport.transaction do
-        csv_import.update!(status: "processing", error_message: nil)
+        # 再投入する分だけremaining_chunksを加算し、再開チャンクが完了した
+        # 時点でfinish_one_chunk!が0を観測してFinalizerを1回起動できるようにする
+        csv_import.update!(
+          status: "processing",
+          error_message: nil,
+          remaining_chunks: csv_import.remaining_chunks + failed.size,
+        )
 
         failed.each do |chunk|
           chunk.update!(status: "pending", retry_count: chunk.retry_count + 1, error_details: nil)
@@ -20,8 +26,8 @@ class CsvImportRetryService
         end
       end
 
-      # Enqueue outside the transaction so the DB state is visible to the worker.
-      chunk_ids.each { |cid| CsvChunkJob.perform_later(cid) }
+      # ワーカーがDB状態を見られるようトランザクションの外でenqueueする
+      ActiveJob.perform_all_later(chunk_ids.map { |cid| CsvChunkJob.new(cid) })
 
       Result.new(retried: chunk_ids.size, chunk_ids: chunk_ids)
     end
