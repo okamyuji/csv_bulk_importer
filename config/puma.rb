@@ -28,8 +28,10 @@
 threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
 threads threads_count, threads_count
 
-# Specifies the `port` that Puma will listen on to receive requests; default is 3000.
-port ENV.fetch("PORT", 3000)
+# `bind` で 0.0.0.0:PORT に明示バインドする。
+# DHI 移行ガイドのとおり `port` と `bind` を両方書くと同一ポートに 2 重バインドし
+# `Address already in use (Errno::EADDRINUSE)` で起動失敗する。`port` は使わない。
+bind "tcp://0.0.0.0:#{ENV.fetch("PORT", 3000)}"
 
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
