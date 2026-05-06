@@ -89,24 +89,42 @@ class CsvImportFinalizerJob < ApplicationJob
   end
 
   def upsert_binary_asset(csv_import, status)
-    BinaryAsset
-      .find_or_initialize_by(csv_import: csv_import)
-      .tap do |asset|
-        asset.assign_attributes(
-          file_name: csv_import.file_name,
-          content_type: csv_import.content_type || "application/octet-stream",
-          byte_size: csv_import.byte_size,
-          checksum: checksum_for_binary_asset(csv_import),
-          reassembled_s3_key: csv_import.reassembled_s3_key,
-          reassembled_checksum: csv_import.reassembled_checksum,
-          status: status,
-          idempotency_key: csv_import.idempotency_key,
-          metadata: {
-            input_kind: csv_import.input_kind,
-          },
-        )
-        asset.save!
+    # find_or_initialize_by + save! は同時 finalizer 実行下で TOCTOU 競合し、
+    # 両方が「無し」と判定 → 両方が save! → idempotency_key の unique 制約違反で
+    # 片方が ActiveRecord::RecordNotUnique になる。
+    # idempotency_key の unique index に依存して、初回は新規作成、再実行は既存行更新に振り分ける。
+    # ActiveRecord::RecordNotUnique を 1 度だけ retry することで、競合相手の commit を
+    # 待ってから既存行を update する。
+    attrs = binary_asset_attributes(csv_import, status)
+    attempts = 0
+    begin
+      asset = BinaryAsset.find_by(idempotency_key: csv_import.idempotency_key)
+      if asset.nil?
+        BinaryAsset.create!(attrs.merge(csv_import: csv_import, idempotency_key: csv_import.idempotency_key))
+      else
+        asset.update!(attrs)
       end
+    rescue ActiveRecord::RecordNotUnique
+      attempts += 1
+      retry if attempts < 2
+
+      raise
+    end
+  end
+
+  def binary_asset_attributes(csv_import, status)
+    {
+      file_name: csv_import.file_name,
+      content_type: csv_import.content_type || "application/octet-stream",
+      byte_size: csv_import.byte_size,
+      checksum: checksum_for_binary_asset(csv_import),
+      reassembled_s3_key: csv_import.reassembled_s3_key,
+      reassembled_checksum: csv_import.reassembled_checksum,
+      status: status,
+      metadata: {
+        input_kind: csv_import.input_kind,
+      },
+    }
   end
 
   def checksum_for_binary_asset(csv_import)

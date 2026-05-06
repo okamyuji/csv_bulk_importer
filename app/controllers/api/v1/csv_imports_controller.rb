@@ -60,7 +60,10 @@ module Api
         CsvImportJob.perform_later(imp.id)
 
         render json: { data: CsvImportResource.new(imp).serializable_hash }, status: :accepted
-      rescue UploadFileClassifier::UnsupportedFileType => e
+      rescue UploadFileClassifier::CsvHeaderMismatch, UploadFileClassifier::UnsupportedFileType => e
+        # CsvHeaderMismatch < UnsupportedFileType so the second rescue alone would catch it,
+        # but enumerate both to keep the 422 contract explicit and survive any future
+        # refactor that breaks the inheritance.
         render json: { error: e.message }, status: :unprocessable_entity
       end
 

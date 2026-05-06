@@ -14,7 +14,9 @@ module Api
           Current.user_id = resource.id
           AuditLogger.event("auth.sign_in_success", method: "password")
         else
-          AuditLogger.event("auth.sign_in_failure", reason: resource.errors.full_messages.first)
+          # full_messagesにはユーザー入力（メールアドレスなど）が混ざり得るので、
+          # 監査ログには属性名のみ落としてPII漏洩を避ける。
+          AuditLogger.event("auth.sign_in_failure", reasons: resource.errors.attribute_names.first(3))
         end
 
         render json: { user: user_payload(resource), token: request.env["warden-jwt_auth.token"] }, status: :ok

@@ -20,6 +20,7 @@ class CsvImportResource
              :total_chunks,
              :idempotency_key,
              :source_checksum,
+             :reassembled_s3_key,
              :reassembled_checksum,
              :error_message,
              :created_at,
@@ -32,6 +33,9 @@ class CsvImportResource
     (imp.progress_numerator.to_f / denominator * 100).round(1)
   end
 
+  # ユーザに見せるためのフレンドリ名。reassembled_s3_keyは決定的キー
+  # （reassembled-<id>.bin）でファイル命名規則を漏らさないが、UIで生のキーよりも
+  # 元ファイル名を見せたいケースが多いので別フィールドで提供する。
   attribute :reassembled_display_name do |imp|
     next nil if imp.reassembled_s3_key.blank?
 

@@ -62,6 +62,7 @@ export interface CsvImport {
   total_chunks: number;
   idempotency_key: string;
   source_checksum: string | null;
+  reassembled_s3_key: string | null;
   reassembled_display_name: string | null;
   reassembled_checksum: string | null;
   error_message: string | null;

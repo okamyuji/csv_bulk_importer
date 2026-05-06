@@ -37,5 +37,58 @@ RSpec.describe "Api::V1::Registrations", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(JSON.parse(response.body)["error"]).to eq("invalid")
     end
+
+    it "audits sign-up failures with attribute names instead of full messages to avoid PII leak" do
+      events = []
+      allow(AuditLogger).to receive(:event) { |name, **payload| events << [name, payload] }
+
+      post "/api/v1/registrations",
+           params: {
+             user: {
+               email: "leaks@example.com",
+               password: "x",
+               password_confirmation: "y",
+               name: "",
+             },
+           }.to_json,
+           headers: {
+             "Content-Type" => "application/json",
+           }
+
+      failure = events.find { |name, _| name == "auth.sign_up_failure" }
+      expect(failure).not_to be_nil
+      reasons = failure.last[:reasons]
+      expect(reasons).to all(be_a(Symbol))
+      expect(reasons).not_to include(match(/leaks@example\.com/i))
+    end
+
+    it "rolls back the user when JWT issuance fails so the email is not orphaned" do
+      stub_const(
+        "Warden::JWTAuth::UserEncoder",
+        Class.new do
+          def call(*)
+            raise JWT::EncodeError, "boom"
+          end
+        end,
+      )
+
+      expect {
+        post "/api/v1/registrations",
+             params: {
+               user: {
+                 email: "rollback@example.com",
+                 password: "password",
+                 password_confirmation: "password",
+                 name: "Rollback",
+               },
+             }.to_json,
+             headers: {
+               "Content-Type" => "application/json",
+             }
+      }.not_to change(User, :count)
+
+      expect(response).to have_http_status(:service_unavailable)
+      expect(JSON.parse(response.body)["error"]).to eq("service_unavailable")
+    end
   end
 end
