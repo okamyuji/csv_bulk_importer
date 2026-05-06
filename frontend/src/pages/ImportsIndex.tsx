@@ -4,6 +4,19 @@ import { api } from "../lib/api";
 import { ProgressBar } from "../components/ProgressBar";
 import { StatusBadge } from "../components/StatusBadge";
 
+function formatBytes(value: number) {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = value;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
 export function ImportsIndex() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["imports"],
@@ -27,7 +40,7 @@ export function ImportsIndex() {
         <p className="text-slate-400 text-sm">Loading…</p>
       ) : (data?.data ?? []).length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-700 p-10 text-center text-slate-400">
-          No imports yet. Start by uploading a CSV.
+          No imports yet. Start by uploading a file.
         </div>
       ) : (
         <ul className="space-y-3">
@@ -41,8 +54,11 @@ export function ImportsIndex() {
                   <div className="min-w-0">
                     <p className="font-medium truncate">{imp.file_name}</p>
                     <p className="text-xs text-slate-400">
-                      {imp.target_kind} · {imp.total_rows} rows ·{" "}
-                      {imp.total_chunks} chunks
+                      {imp.target_kind} ·{" "}
+                      {imp.input_kind === "binary"
+                        ? formatBytes(imp.total_bytes || imp.byte_size)
+                        : `${imp.total_rows} rows`}{" "}
+                      · {imp.total_chunks} chunks
                     </p>
                   </div>
                   <StatusBadge status={imp.status} />

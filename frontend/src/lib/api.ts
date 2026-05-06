@@ -48,13 +48,23 @@ export interface User {
 export interface CsvImport {
   id: number;
   file_name: string;
-  target_kind: "sales_record" | "ledger_entry";
+  input_kind: "csv" | "binary";
+  target_kind: "sales_record" | "ledger_entry" | "binary_asset";
+  content_type: string | null;
+  byte_size: number;
   status: string;
   total_rows: number;
   processed_rows: number;
   failed_rows: number;
+  total_bytes: number;
+  processed_bytes: number;
+  failed_bytes: number;
   total_chunks: number;
   idempotency_key: string;
+  source_checksum: string | null;
+  reassembled_s3_key: string | null;
+  reassembled_display_name: string | null;
+  reassembled_checksum: string | null;
   error_message: string | null;
   progress: number;
   created_at: string;
@@ -67,6 +77,10 @@ export interface CsvImportChunk {
   chunk_index: number;
   start_row: number;
   end_row: number;
+  start_byte: number | null;
+  end_byte: number | null;
+  byte_size: number;
+  checksum: string | null;
   status: string;
   processed_rows: number;
   failed_rows: number;
@@ -133,13 +147,15 @@ export const api = {
 
   createImport(
     file: File,
-    target_kind: string,
+    target_kind: "sales_record" | "ledger_entry" | "binary_asset",
+    input_kind: "csv" | "binary",
     onProgress?: (pct: number) => void,
   ) {
     return new Promise<{ data: CsvImport }>((resolve, reject) => {
       const form = new FormData();
       form.append("file", file);
       form.append("target_kind", target_kind);
+      form.append("input_kind", input_kind);
 
       const xhr = new XMLHttpRequest();
       xhr.open("POST", `${API_BASE}/csv_imports`);
