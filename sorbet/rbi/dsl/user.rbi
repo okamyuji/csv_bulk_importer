@@ -368,18 +368,18 @@ class User
 
   module GeneratedAssociationMethods
     sig { returns(T::Array[T.untyped]) }
-    def csv_import_ids; end
+    def file_import_ids; end
 
     sig { params(ids: T::Array[T.untyped]).returns(T::Array[T.untyped]) }
-    def csv_import_ids=(ids); end
+    def file_import_ids=(ids); end
 
-    # This method is created by ActiveRecord on the `User` class because it declared `has_many :csv_imports`.
+    # This method is created by ActiveRecord on the `User` class because it declared `has_many :file_imports`.
     # 🔗 [Rails guide for `has_many` association](https://guides.rubyonrails.org/association_basics.html#the-has-many-association)
-    sig { returns(::CsvImport::PrivateCollectionProxy) }
-    def csv_imports; end
+    sig { returns(::FileImport::PrivateCollectionProxy) }
+    def file_imports; end
 
-    sig { params(value: T::Enumerable[::CsvImport]).void }
-    def csv_imports=(value); end
+    sig { params(value: T::Enumerable[::FileImport]).void }
+    def file_imports=(value); end
   end
 
   module GeneratedAssociationRelationMethods

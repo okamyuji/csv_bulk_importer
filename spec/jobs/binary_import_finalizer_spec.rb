@@ -2,13 +2,13 @@
 
 require "rails_helper"
 
-RSpec.describe CsvImportFinalizerJob, "binary imports" do
+RSpec.describe FileImportFinalizerJob, "binary imports" do
   let(:user) { create(:user) }
   let(:bytes) { "aaabbbbcc".b }
   let(:checksum) { Digest::SHA256.hexdigest(bytes) }
-  let(:csv_import) do
+  let(:file_import) do
     create(
-      :csv_import,
+      :file_import,
       user: user,
       input_kind: "binary",
       target_kind: "binary_asset",
@@ -25,9 +25,9 @@ RSpec.describe CsvImportFinalizerJob, "binary imports" do
   end
 
   def make_chunk(index, chunk_bytes, status: "completed")
-    start_byte = csv_import.csv_import_chunks.sum(:byte_size)
+    start_byte = file_import.file_import_chunks.sum(:byte_size)
     chunk =
-      csv_import.csv_import_chunks.create!(
+      file_import.file_import_chunks.create!(
         chunk_index: index,
         status: status,
         start_byte: start_byte,
@@ -44,42 +44,42 @@ RSpec.describe CsvImportFinalizerJob, "binary imports" do
     make_chunk(1, "bbbb")
     make_chunk(2, "cc")
 
-    described_class.perform_now(csv_import.id)
+    described_class.perform_now(file_import.id)
 
-    csv_import.reload
-    expect(csv_import.status).to eq("completed")
-    expect(csv_import.processed_bytes).to eq(bytes.bytesize)
-    expect(csv_import.reassembled_checksum).to eq(checksum)
-    expect(AppS3.client.get_object(bucket: AppS3.bucket, key: csv_import.reassembled_s3_key).body.read).to eq(bytes)
-    expect(csv_import.binary_asset.status).to eq("completed")
+    file_import.reload
+    expect(file_import.status).to eq("completed")
+    expect(file_import.processed_bytes).to eq(bytes.bytesize)
+    expect(file_import.reassembled_checksum).to eq(checksum)
+    expect(AppS3.client.get_object(bucket: AppS3.bucket, key: file_import.reassembled_s3_key).body.read).to eq(bytes)
+    expect(file_import.binary_asset.status).to eq("completed")
   end
 
   it "is idempotent after a completed import already has a completed asset" do
     create(
       :binary_asset,
-      csv_import: csv_import,
-      file_name: csv_import.file_name,
-      content_type: csv_import.content_type,
-      byte_size: csv_import.byte_size,
-      checksum: csv_import.source_checksum,
+      file_import: file_import,
+      file_name: file_import.file_name,
+      content_type: file_import.content_type,
+      byte_size: file_import.byte_size,
+      checksum: file_import.source_checksum,
       status: "completed",
-      idempotency_key: csv_import.idempotency_key,
+      idempotency_key: file_import.idempotency_key,
     )
-    csv_import.update!(status: "completed")
+    file_import.update!(status: "completed")
 
     expect(BinaryFileReassembler).not_to receive(:call)
 
-    described_class.perform_now(csv_import.id)
+    described_class.perform_now(file_import.id)
   end
 
   it "does not reassemble when a chunk failed" do
     make_chunk(0, "aaa")
     make_chunk(1, "bbbb", status: "failed")
 
-    described_class.perform_now(csv_import.id)
+    described_class.perform_now(file_import.id)
 
-    csv_import.reload
-    expect(csv_import.status).to eq("partially_failed")
-    expect(csv_import.reassembled_s3_key).to be_nil
+    file_import.reload
+    expect(file_import.status).to eq("partially_failed")
+    expect(file_import.reassembled_s3_key).to be_nil
   end
 end

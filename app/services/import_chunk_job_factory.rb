@@ -4,13 +4,13 @@
 class ImportChunkJobFactory
   class << self
     def build(chunk)
-      case chunk.csv_import.input_kind
+      case chunk.file_import.input_kind
       when "csv"
         CsvChunkJob.new(chunk.id)
       when "binary"
         BinaryChunkJob.new(chunk.id)
       else
-        raise ArgumentError, "unknown input_kind: #{chunk.csv_import.input_kind.inspect}"
+        raise ArgumentError, "unknown input_kind: #{chunk.file_import.input_kind.inspect}"
       end
     end
   end

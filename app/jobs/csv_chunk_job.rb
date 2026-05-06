@@ -11,15 +11,15 @@ class CsvChunkJob < ApplicationJob
   retry_on StandardError, wait: :polynomially_longer, attempts: 3, jitter: 0.15
 
   def perform(chunk_id)
-    chunk = CsvImportChunk.lock.find(chunk_id)
-    Current.csv_import_id = chunk.csv_import_id
+    chunk = FileImportChunk.lock.find(chunk_id)
+    Current.file_import_id = chunk.file_import_id
     # Already-successful chunks are skipped to guarantee idempotency under Solid Queue's at-least-once delivery.
     return if chunk.completed?
 
     chunk.update!(status: "processing")
 
-    csv_import = T.must(chunk.csv_import)
-    target_class = target_class_for(csv_import.target_kind)
+    file_import = T.must(chunk.file_import)
+    target_class = target_class_for(file_import.target_kind)
 
     csv_body = fetch_chunk_body(chunk)
 
@@ -33,7 +33,7 @@ class CsvChunkJob < ApplicationJob
       .each
       .with_index(T.must(chunk.start_row)) do |row, row_num|
         total_in_chunk += 1
-        result = map_and_validate(row, csv_import, target_class, row_num)
+        result = map_and_validate(row, file_import, target_class, row_num)
 
         if result[:ok]
           valid_batch << result[:attrs]
@@ -78,20 +78,20 @@ class CsvChunkJob < ApplicationJob
     broadcast_chunk_completed(chunk)
     # remaining_chunksを0にしたワーカーだけがFinalizerを起動する。
     # これでFinalizerのenqueue/実行回数がインポートあたり1回に収まる。
-    CsvImportFinalizerJob.perform_later(csv_import.id) if csv_import.finish_one_chunk!
+    FileImportFinalizerJob.perform_later(file_import.id) if file_import.finish_one_chunk!
   rescue ActiveRecord::RecordNotFound
     raise
   rescue StandardError => e
     # 致命的エラー時はremaining_chunksをデクリメントする成功パスを通らない。
     # ここで明示的にデクリメントしないと、全チャンクが失敗した場合に
     # Finalizerが起動せずインポートのステータスがfailedに確定しない。
-    csv_import_id = chunk&.csv_import_id
-    if csv_import_id
-      csv_import = CsvImport.find_by(id: csv_import_id)
-      CsvImportFinalizerJob.perform_later(csv_import_id) if csv_import&.finish_one_chunk!
+    file_import_id = chunk&.file_import_id
+    if file_import_id
+      file_import = FileImport.find_by(id: file_import_id)
+      FileImportFinalizerJob.perform_later(file_import_id) if file_import&.finish_one_chunk!
     end
     # Rails' JSON column attribute handles serialization, so pass a plain array.
-    CsvImportChunk.where(id: chunk_id).update_all(
+    FileImportChunk.where(id: chunk_id).update_all(
       status: "failed",
       error_details: [{ fatal: e.message }],
       retry_count: (chunk&.retry_count.to_i) + 1,
@@ -112,13 +112,14 @@ class CsvChunkJob < ApplicationJob
   end
 
   # Returns { ok: true, attrs: } or { ok: false, error: { row:, errors: [...] } }
-  def map_and_validate(row, csv_import, target_class, row_num)
-    attrs = CsvRowMapper.call(target_kind: csv_import.target_kind, row: row.to_h, base_key: csv_import.idempotency_key)
+  def map_and_validate(row, file_import, target_class, row_num)
+    attrs =
+      CsvRowMapper.call(target_kind: file_import.target_kind, row: row.to_h, base_key: file_import.idempotency_key)
 
     record = target_class.new(attrs)
     return { ok: false, error: { row: row_num, errors: record.errors.full_messages } } unless record.valid?
 
-    attrs[:csv_import_id] = csv_import.id
+    attrs[:file_import_id] = file_import.id
     now = Time.current
     attrs[:created_at] = now
     attrs[:updated_at] = now
@@ -158,7 +159,7 @@ class CsvChunkJob < ApplicationJob
   end
 
   def broadcast_chunk_completed(chunk)
-    CsvImportChannel.broadcast_chunk_completed(chunk)
+    FileImportChannel.broadcast_chunk_completed(chunk)
     Rails.logger.info(
       "[CsvChunkJob] chunk_completed id=#{chunk.id} processed=#{chunk.processed_rows} failed=#{chunk.failed_rows} status=#{chunk.status}",
     )

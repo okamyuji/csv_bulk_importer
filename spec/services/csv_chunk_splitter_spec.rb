@@ -6,7 +6,7 @@ RSpec.describe CsvChunkSplitter do
   let(:fake) { FakeS3.new }
 
   def call(io, chunk_size: 500)
-    described_class.call(io: io, s3_prefix: "csv_imports/99", bucket: "b", s3_client: fake, chunk_size: chunk_size)
+    described_class.call(io: io, s3_prefix: "file_imports/99", bucket: "b", s3_client: fake, chunk_size: chunk_size)
   end
 
   it "splits 1250 rows into 3 chunks and preserves header in each chunk" do

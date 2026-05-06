@@ -100,12 +100,12 @@ make dev
 
 ### 共通フロー
 
-1. フロントエンドのSPAからmultipartのPOSTリクエストで`/api/v1/csv_imports`にファイルを送信します
+1. フロントエンドのSPAからmultipartのPOSTリクエストで`/api/v1/file_imports`にファイルを送信します
 2. UploadFileClassifierがMarcelとファイル拡張子からCSV/バイナリを判別し、CSVの場合はヘッダ行が`target_kind`と整合するかも検証します（不整合時は`CsvHeaderMismatch`で422を返します）
-3. RailsのコントローラがCsvImportレコードを作成し、ActiveStorageを通じてS3に原本を保存します。`input_kind`（`csv`または`binary`）と`target_kind`（`sales_record`、`ledger_entry`、`binary_asset`）はDBバリデーションで整合性が担保されます
-4. CsvImportJob（親ジョブ）がImportSourceOpener経由で原本を開き、ImportSplitterに委譲してチャンク分割します
+3. RailsのコントローラがFileImportレコードを作成し、ActiveStorageを通じてS3に原本を保存します。`input_kind`（`csv`または`binary`）と`target_kind`（`sales_record`、`ledger_entry`、`binary_asset`）はDBバリデーションで整合性が担保されます
+4. FileImportJob（親ジョブ）がImportSourceOpener経由で原本を開き、ImportSplitterに委譲してチャンク分割します
 5. 各チャンクに対して`ImportChunkJobFactory`がCSV用`CsvChunkJob`またはバイナリ用`BinaryChunkJob`を選んで起動します
-6. CsvImportFinalizerJobが全チャンクの結果を集約し、最終ステータスを確定します
+6. FileImportFinalizerJobが全チャンクの結果を集約し、最終ステータスを確定します
 7. 各フェーズでActionCableを通じてリアルタイムの進捗イベントをブロードキャストします
 
 ### CSVインポート
@@ -118,9 +118,9 @@ make dev
 ### バイナリインポート
 
 - BinaryChunkSplitterがファイルを8MB単位（DEFAULT_CHUNK_BYTES）に分割し、各チャンクをS3へputしながらSHA-256ダイジェストを更新して`source_checksum`を記録します
-- BinaryChunkJobがチャンクごとにS3からストリーミングでSHA-256を再計算し、`csv_import_chunks.checksum`に記録します
-- 全チャンクが`completed`になったらCsvImportFinalizerJobがBinaryFileReassemblerを呼び出し、S3 `UploadPartCopy` ベースのマルチパート再構成（チャンクごとのCopySource指定で、ローカル一時ファイルに書き戻さない）で1オブジェクトに統合します
-- 再構成オブジェクトのキーは決定的（`reassembled-<csv_import_id>.bin`）で、元のファイル名はS3オブジェクトメタデータ`original_filename`に格納します
+- BinaryChunkJobがチャンクごとにS3からストリーミングでSHA-256を再計算し、`file_import_chunks.checksum`に記録します
+- 全チャンクが`completed`になったらFileImportFinalizerJobがBinaryFileReassemblerを呼び出し、S3 `UploadPartCopy` ベースのマルチパート再構成（チャンクごとのCopySource指定で、ローカル一時ファイルに書き戻さない）で1オブジェクトに統合します
+- 再構成オブジェクトのキーは決定的（`reassembled-<file_import_id>.bin`）で、元のファイル名はS3オブジェクトメタデータ`original_filename`に格納します
 - チャンクの連続性（`chunk_index`の通番、`start_byte`/`end_byte`の隙間なし）と`source_checksum`の一致を検証し、不整合時は`ChecksumMismatch`/`MissingSourceChecksum`/`ArgumentError`で失敗させます
 - 結果は`BinaryAsset`レコードに保存します。`idempotency_key`のDB unique制約で同時finalizer実行時の冪等性を保証します
 
@@ -140,9 +140,9 @@ make dev
 
 - CSVの各行にはSHA-256ハッシュによる`idempotency_key`を付与しています。MySQLのUNIQUEインデックスと`upsert_all`（ON DUPLICATE KEY UPDATE）の組み合わせにより、ジョブが再実行された場合でもレコードが重複することはありません
 - BinaryChunkJobは行ロック（`SELECT ... FOR UPDATE`）を`ActiveRecord::Base.transaction`で囲み、TOCTOUを排除した上で`status: "processing"`に遷移させます
-- BinaryAssetは`idempotency_key`のunique indexに依存して`find_by` → `create!`/`update!`に分岐し、`ActiveRecord::RecordNotUnique`は1度だけリトライして既存行を更新するため、CsvImportFinalizerJobが冪等に再実行できます
+- BinaryAssetは`idempotency_key`のunique indexに依存して`find_by` → `create!`/`update!`に分岐し、`ActiveRecord::RecordNotUnique`は1度だけリトライして既存行を更新するため、FileImportFinalizerJobが冪等に再実行できます
 - BinaryFileReassemblerはチャンクの`chunk_index`の通番性、`start_byte`/`end_byte`の隙間がないこと、`source_checksum`の一致を毎回検証してから再構成するため、途中で再実行されても整合性を破壊しません
-- 完了済みのチャンクおよびすでに`completed`になったCsvImport+BinaryAssetは処理をスキップするため、Solid Queueのat-least-once配送に対しても安全です
+- 完了済みのチャンクおよびすでに`completed`になったFileImport+BinaryAssetは処理をスキップするため、Solid Queueのat-least-once配送に対しても安全です
 
 ## 監査ログについて
 
@@ -180,7 +180,7 @@ make quality
 
 ## ベンチマークの実行方法
 
-`lib/tasks/csv_import_benchmark.rake`に、合成CSVを生成して`CsvImportJob`をinline実行する計測タスクを用意しています。LocalStack（S3）とMySQLが起動している前提で、以下のコマンドで再現できます。
+`lib/tasks/file_import_benchmark.rake`に、合成CSVを生成して`FileImportJob`をinline実行する計測タスクを用意しています。LocalStack（S3）とMySQLが起動している前提で、以下のコマンドで再現できます。
 
 ```bash
 docker compose up -d
@@ -188,13 +188,13 @@ bin/rails db:prepare
 
 # 10万行
 SERVICE_TYPE=amazon_localstack ACTIVE_STORAGE_SERVICE=amazon_localstack \
-  bundle exec rake "csv_import:benchmark[100000]"
+  bundle exec rake "file_import:benchmark[100000]"
 
 # 100万行（LocalStackのCRC32検証を回避するため環境変数を追加）
 SERVICE_TYPE=amazon_localstack ACTIVE_STORAGE_SERVICE=amazon_localstack \
 AWS_REQUEST_CHECKSUM_CALCULATION=when_required \
 AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \
-  bundle exec rake "csv_import:benchmark[1000000]"
+  bundle exec rake "file_import:benchmark[1000000]"
 ```
 
 タスクは以下の項目を出力します。
@@ -202,7 +202,7 @@ AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \
 - 合計時間とスループット（行/秒）
 - 開始時と終了時のRSS（メガバイト単位）
 - `ActiveJob.perform_all_later`の呼び出し回数（チャンク数によらず1回）
-- `CsvImportFinalizerJob.perform_later`の呼び出し回数（インポート1件あたり1回）
+- `FileImportFinalizerJob.perform_later`の呼び出し回数（インポート1件あたり1回）
 
 inline adapterによる完全直列実行のため、Solid Queueでthreads/processesを増やしたときの並列化効果は別途計測してください。
 

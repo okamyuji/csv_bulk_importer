@@ -3,23 +3,23 @@
 
 module Api
   module V1
-    class CsvImportsController < Api::BaseController
+    class FileImportsController < Api::BaseController
       def index
-        scope = policy_scope(CsvImport).recent.limit(100)
-        render json: { data: CsvImportResource.new(scope).serializable_hash }
+        scope = policy_scope(FileImport).recent.limit(100)
+        render json: { data: FileImportResource.new(scope).serializable_hash }
       end
 
       def show
-        imp = CsvImport.find(params[:id])
+        imp = FileImport.find(params[:id])
         authorize imp
         render json: {
-                 data: CsvImportResource.new(imp).serializable_hash,
-                 chunks: CsvImportChunkResource.new(imp.csv_import_chunks.order(:chunk_index)).serializable_hash,
+                 data: FileImportResource.new(imp).serializable_hash,
+                 chunks: FileImportChunkResource.new(imp.file_import_chunks.order(:chunk_index)).serializable_hash,
                }
       end
 
       def create
-        authorize CsvImport, :create?
+        authorize FileImport, :create?
 
         file = params.require(:file)
         target_kind = params.require(:target_kind)
@@ -27,7 +27,7 @@ module Api
           UploadFileClassifier.call(file: file, target_kind: target_kind, requested_input_kind: params[:input_kind])
 
         imp =
-          CsvImport.create!(
+          FileImport.create!(
             user: current_user,
             file_name: file.original_filename,
             input_kind: classification.input_kind,
@@ -46,9 +46,9 @@ module Api
         )
         imp.update!(s3_prefix: "imports/#{classification.input_kind}/#{imp.id}")
 
-        Current.csv_import_id = imp.id
+        Current.file_import_id = imp.id
         AuditLogger.event(
-          "csv_import.created",
+          "file_import.created",
           file_name: file.original_filename,
           byte_size: file.size,
           content_type: classification.content_type,
@@ -57,9 +57,9 @@ module Api
           idempotency_prefix: imp.idempotency_key[0, 12],
         )
 
-        CsvImportJob.perform_later(imp.id)
+        FileImportJob.perform_later(imp.id)
 
-        render json: { data: CsvImportResource.new(imp).serializable_hash }, status: :accepted
+        render json: { data: FileImportResource.new(imp).serializable_hash }, status: :accepted
       rescue UploadFileClassifier::CsvHeaderMismatch, UploadFileClassifier::UnsupportedFileType => e
         # CsvHeaderMismatch < UnsupportedFileType so the second rescue alone would catch it,
         # but enumerate both to keep the 422 contract explicit and survive any future
@@ -68,11 +68,11 @@ module Api
       end
 
       def retry
-        imp = CsvImport.find(params[:id])
+        imp = FileImport.find(params[:id])
         authorize imp, :retry?
-        Current.csv_import_id = imp.id
-        result = CsvImportRetryService.call(imp)
-        AuditLogger.event("csv_import.retried", retried_chunks: result.retried)
+        Current.file_import_id = imp.id
+        result = FileImportRetryService.call(imp)
+        AuditLogger.event("file_import.retried", retried_chunks: result.retried)
         render json: { retried: result.retried }, status: :accepted
       end
 

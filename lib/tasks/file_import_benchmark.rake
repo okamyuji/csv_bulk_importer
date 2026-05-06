@@ -5,15 +5,15 @@
 # 計測値はキューのpollingコストではなくパイプライン自体のコストになる。
 #
 # 使い方:
-#   bundle exec rake "csv_import:benchmark[100000]"
-#   bundle exec rake "csv_import:benchmark[1000000]"
+#   bundle exec rake "file_import:benchmark[100000]"
+#   bundle exec rake "file_import:benchmark[1000000]"
 #
 #   # 当初設計（Finalizerをチャンクごとに呼ぶ／perform_laterを個別呼び出し）を再現する
-#   BENCH_MODE=legacy bundle exec rake "csv_import:benchmark[100000]"
+#   BENCH_MODE=legacy bundle exec rake "file_import:benchmark[100000]"
 #
 # 前提: MySQL（development DB）+ LocalStack S3（docker compose up）。
-namespace :csv_import do
-  desc "Benchmark CsvImportJob end-to-end with N synthetic rows"
+namespace :file_import do
+  desc "Benchmark FileImportJob end-to-end with N synthetic rows"
   task :benchmark, [:rows] => :environment do |_t, args|
     rows = Integer(args[:rows] || 100_000)
     abort("Rails.env=#{Rails.env}: only run benchmarks in development/test") if Rails.env.production?
@@ -39,15 +39,15 @@ namespace :csv_import do
     tmp_path = Rails.root.join("tmp/bench_#{rows}.csv")
     generate_csv(tmp_path, rows)
 
-    csv_import =
-      CsvImport.create!(
+    file_import =
+      FileImport.create!(
         user: user,
         file_name: tmp_path.basename.to_s,
         target_kind: "sales_record",
         status: "pending",
         idempotency_key: "bench-#{rows}-#{Time.current.to_f}-#{SecureRandom.hex(4)}",
       )
-    csv_import.source_file.attach(io: File.open(tmp_path), filename: tmp_path.basename.to_s, content_type: "text/csv")
+    file_import.source_file.attach(io: File.open(tmp_path), filename: tmp_path.basename.to_s, content_type: "text/csv")
 
     legacy_mode = ENV["BENCH_MODE"] == "legacy"
 
@@ -56,7 +56,7 @@ namespace :csv_import do
       # 挙動を再現する。同じハードウェア・環境でbulk enqueue + Finalizer
       # 1回化と比較するため。本番コードはそのままで、このrakeタスク内だけで
       # オーバーライドする。
-      CsvImport.class_eval { define_method(:finish_one_chunk!) { true } }
+      FileImport.class_eval { define_method(:finish_one_chunk!) { true } }
       legacy_bulk_patch =
         Module.new do
           def perform_all_later(jobs)
@@ -101,31 +101,31 @@ namespace :csv_import do
     Thread.current[:bench_chunk_perform_later_calls] = 0
 
     ActiveJob.singleton_class.prepend(bulk_spy)
-    CsvImportFinalizerJob.singleton_class.prepend(finalizer_spy)
+    FileImportFinalizerJob.singleton_class.prepend(finalizer_spy)
     CsvChunkJob.singleton_class.prepend(chunk_perform_later_spy)
 
-    elapsed = Benchmark.realtime { CsvImportJob.perform_now(csv_import.id) }
+    elapsed = Benchmark.realtime { FileImportJob.perform_now(file_import.id) }
 
     bulk_enqueue_calls = Thread.current[:bench_bulk_calls].to_i
     finalizer_enqueue_calls = Thread.current[:bench_finalizer_calls].to_i
     chunk_perform_later_calls = Thread.current[:bench_chunk_perform_later_calls].to_i
 
     rss_after = current_rss_mb
-    csv_import.reload
+    file_import.reload
 
     puts ""
     puts "=== CSV import benchmark ==="
     puts "mode                       : #{legacy_mode ? "legacy" : "current"}"
     puts "rows                       : #{rows}"
-    puts "total_chunks               : #{csv_import.total_chunks}"
+    puts "total_chunks               : #{file_import.total_chunks}"
     puts "elapsed (seconds)          : #{elapsed.round(2)}"
     puts "throughput (rows/sec)      : #{(rows / elapsed).round}"
     puts "rss before / after MB      : #{rss_before} / #{rss_after} (delta +#{rss_after - rss_before})"
     puts "ActiveJob.perform_all_later: #{bulk_enqueue_calls}"
     puts "CsvChunkJob.perform_later  : #{chunk_perform_later_calls}"
     puts "finalizer enqueues         : #{finalizer_enqueue_calls}"
-    puts "final status               : #{csv_import.status}"
-    puts "processed / failed         : #{csv_import.processed_rows} / #{csv_import.failed_rows}"
+    puts "final status               : #{file_import.status}"
+    puts "processed / failed         : #{file_import.processed_rows} / #{file_import.failed_rows}"
   ensure
     FileUtils.rm_f(tmp_path) if defined?(tmp_path) && tmp_path
   end

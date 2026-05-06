@@ -4,11 +4,11 @@ require "rails_helper"
 
 RSpec.describe CsvChunkJob, "finalizer enqueue rules" do
   let(:user) { create(:user) }
-  let(:s3_prefix) { "csv_imports/finalizer-spec" }
+  let(:s3_prefix) { "file_imports/finalizer-spec" }
 
-  let(:csv_import) do
+  let(:file_import) do
     create(
-      :csv_import,
+      :file_import,
       user: user,
       target_kind: "sales_record",
       status: "processing",
@@ -25,7 +25,7 @@ RSpec.describe CsvChunkJob, "finalizer enqueue rules" do
 
   def make_chunk(index)
     chunk =
-      csv_import.csv_import_chunks.create!(
+      file_import.file_import_chunks.create!(
         chunk_index: index,
         start_row: index + 1,
         end_row: index + 1,
@@ -36,29 +36,29 @@ RSpec.describe CsvChunkJob, "finalizer enqueue rules" do
     chunk
   end
 
-  it "enqueues CsvImportFinalizerJob exactly once when the last chunk completes" do
+  it "enqueues FileImportFinalizerJob exactly once when the last chunk completes" do
     chunks = 3.times.map { |i| make_chunk(i) }
 
     expect do
       described_class.perform_now(chunks[0].id)
       described_class.perform_now(chunks[1].id)
-    end.not_to(have_enqueued_job(CsvImportFinalizerJob))
+    end.not_to(have_enqueued_job(FileImportFinalizerJob))
 
-    expect { described_class.perform_now(chunks[2].id) }.to have_enqueued_job(CsvImportFinalizerJob).with(
-      csv_import.id,
+    expect { described_class.perform_now(chunks[2].id) }.to have_enqueued_job(FileImportFinalizerJob).with(
+      file_import.id,
     ).exactly(:once)
 
-    expect(csv_import.reload.remaining_chunks).to eq(0)
+    expect(file_import.reload.remaining_chunks).to eq(0)
   end
 
   it "only the final caller sees zero across re-deliveries (idempotent)" do
     chunks = 3.times.map { |i| make_chunk(i) }
     chunks.each { |c| described_class.perform_now(c.id) }
-    expect(csv_import.reload.remaining_chunks).to eq(0)
+    expect(file_import.reload.remaining_chunks).to eq(0)
 
     # Solid Queueのat-least-once再配信: すでに完了したチャンクを
     # 再実行しても、カウンタを再度デクリメントしたりFinalizerを再enqueueしない。
-    expect { described_class.perform_now(chunks[0].id) }.not_to(have_enqueued_job(CsvImportFinalizerJob))
-    expect(csv_import.reload.remaining_chunks).to eq(0)
+    expect { described_class.perform_now(chunks[0].id) }.not_to(have_enqueued_job(FileImportFinalizerJob))
+    expect(file_import.reload.remaining_chunks).to eq(0)
   end
 end

@@ -13,19 +13,19 @@ class BinaryFileReassembler
   end
 
   class << self
-    def call(csv_import:, bucket:, s3_client:)
-      new(csv_import, bucket, s3_client).call
+    def call(file_import:, bucket:, s3_client:)
+      new(file_import, bucket, s3_client).call
     end
   end
 
-  def initialize(csv_import, bucket, s3_client)
-    @csv_import = csv_import
+  def initialize(file_import, bucket, s3_client)
+    @file_import = file_import
     @bucket = bucket
     @s3_client = s3_client
   end
 
   def call
-    chunks = @csv_import.csv_import_chunks.order(:chunk_index).to_a
+    chunks = @file_import.file_import_chunks.order(:chunk_index).to_a
     raise ArgumentError, "no chunks to reassemble" if chunks.empty?
     raise ArgumentError, "chunks are not complete" if chunks.any? { |chunk| !chunk.completed? }
     validate_chunk_sequence!(chunks)
@@ -33,7 +33,7 @@ class BinaryFileReassembler
     checksum = checksum_for(chunks)
     verify_checksum!(checksum)
 
-    key = "#{@csv_import.s3_prefix_or_default}/reassembled/#{sanitized_file_name}"
+    key = "#{@file_import.s3_prefix_or_default}/reassembled/#{sanitized_file_name}"
     copy_chunks_on_s3(chunks, key)
     Result.new(s3_key: key, checksum: checksum, byte_size: chunks.sum(&:byte_size))
   end
@@ -67,7 +67,7 @@ class BinaryFileReassembler
         bucket: @bucket,
         copy_source: copy_source_for(T.must(chunks.first)),
         key: key,
-        content_type: @csv_import.content_type,
+        content_type: @file_import.content_type,
         metadata_directive: "REPLACE",
         metadata: original_file_metadata,
       )
@@ -81,7 +81,7 @@ class BinaryFileReassembler
       @s3_client.create_multipart_upload(
         bucket: @bucket,
         key: key,
-        content_type: @csv_import.content_type,
+        content_type: @file_import.content_type,
         metadata: original_file_metadata,
       )
     upload_id = upload.upload_id
@@ -116,7 +116,7 @@ class BinaryFileReassembler
   end
 
   def validate_chunk_sequence!(chunks)
-    expected_total = @csv_import.total_chunks
+    expected_total = @file_import.total_chunks
     unless chunks.size == expected_total
       raise ArgumentError, "expected #{expected_total} chunks but found #{chunks.size}"
     end
@@ -134,17 +134,17 @@ class BinaryFileReassembler
   end
 
   def verify_checksum!(checksum)
-    raise MissingSourceChecksum, "missing source checksum" if @csv_import.source_checksum.blank?
-    return if @csv_import.source_checksum == checksum
+    raise MissingSourceChecksum, "missing source checksum" if @file_import.source_checksum.blank?
+    return if @file_import.source_checksum == checksum
 
     raise ChecksumMismatch, "reassembled checksum mismatch"
   end
 
   def sanitized_file_name
-    "reassembled-#{@csv_import.id}.bin"
+    "reassembled-#{@file_import.id}.bin"
   end
 
   def original_file_metadata
-    { "original_filename" => @csv_import.file_name.to_s }
+    { "original_filename" => @file_import.file_name.to_s }
   end
 end

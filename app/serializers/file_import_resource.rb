@@ -1,7 +1,7 @@
 # typed: true
 # frozen_string_literal: true
 
-class CsvImportResource
+class FileImportResource
   include Alba::Resource
 
   attributes :id,

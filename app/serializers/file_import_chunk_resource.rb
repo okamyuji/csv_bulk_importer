@@ -1,11 +1,11 @@
 # typed: true
 # frozen_string_literal: true
 
-class CsvImportChunkResource
+class FileImportChunkResource
   include Alba::Resource
 
   attributes :id,
-             :csv_import_id,
+             :file_import_id,
              :chunk_index,
              :start_row,
              :end_row,

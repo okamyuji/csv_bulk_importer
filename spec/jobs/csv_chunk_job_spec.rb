@@ -16,17 +16,17 @@ RSpec.describe CsvChunkJob do
     header + rows
   end
 
-  let(:csv_import) do
-    create(:csv_import, user: user, target_kind: "sales_record", status: "processing", s3_prefix: "csv_imports/ci")
+  let(:file_import) do
+    create(:file_import, user: user, target_kind: "sales_record", status: "processing", s3_prefix: "file_imports/ci")
   end
 
   let(:chunk) do
-    csv_import.csv_import_chunks.create!(
+    file_import.file_import_chunks.create!(
       chunk_index: 0,
       start_row: 1,
       end_row: 4,
       status: "pending",
-      s3_key: "csv_imports/ci/chunk_000000.csv",
+      s3_key: "file_imports/ci/chunk_000000.csv",
     )
   end
 

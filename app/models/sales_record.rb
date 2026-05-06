@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 class SalesRecord < ApplicationRecord
-  belongs_to :csv_import, optional: true
+  belongs_to :file_import, optional: true
 
   validates :recorded_on,
             :customer_code,

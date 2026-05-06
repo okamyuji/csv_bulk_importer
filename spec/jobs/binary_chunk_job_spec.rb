@@ -4,9 +4,9 @@ require "rails_helper"
 
 RSpec.describe BinaryChunkJob do
   let(:user) { create(:user) }
-  let(:csv_import) do
+  let(:file_import) do
     create(
-      :csv_import,
+      :file_import,
       user: user,
       input_kind: "binary",
       target_kind: "binary_asset",
@@ -22,7 +22,7 @@ RSpec.describe BinaryChunkJob do
     )
   end
   let(:chunk) do
-    csv_import.csv_import_chunks.create!(
+    file_import.file_import_chunks.create!(
       chunk_index: 0,
       status: "pending",
       start_byte: 0,
@@ -40,9 +40,9 @@ RSpec.describe BinaryChunkJob do
 
     # 再試行中なのでFinalizerは起動しない。remaining_chunksも変更しない（rescueでは
     # finish_one_chunk! を呼ばない方針）。
-    expect(csv_import.reload.remaining_chunks).to eq(1)
-    expect(csv_import.csv_import_chunks.find(chunk.id).status).to eq("failed")
-    expect(CsvImportFinalizerJob).not_to have_been_enqueued
+    expect(file_import.reload.remaining_chunks).to eq(1)
+    expect(file_import.file_import_chunks.find(chunk.id).status).to eq("failed")
+    expect(FileImportFinalizerJob).not_to have_been_enqueued
   end
 
   it "enqueues the finalizer once the final retry has failed permanently" do
@@ -54,7 +54,7 @@ RSpec.describe BinaryChunkJob do
     # 永続的失敗が確定した時点でFinalizerに通知する。Finalizer自身が
     # 「pending/processing なチャンクが残っているか」を再確認する冪等構造のため、
     # remaining_chunksの減算には依存しない。
-    expect(csv_import.csv_import_chunks.find(chunk.id).status).to eq("failed")
-    expect(CsvImportFinalizerJob).to have_been_enqueued.with(csv_import.id)
+    expect(file_import.file_import_chunks.find(chunk.id).status).to eq("failed")
+    expect(FileImportFinalizerJob).to have_been_enqueued.with(file_import.id)
   end
 end

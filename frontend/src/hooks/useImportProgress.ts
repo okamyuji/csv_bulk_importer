@@ -4,7 +4,7 @@ import { getToken } from "../lib/api";
 
 export interface ProgressEvent {
   event: "split_started" | "chunk_completed" | "import_finalized";
-  csv_import_id: number;
+  file_import_id: number;
   input_kind?: "csv" | "binary";
   total_rows?: number;
   total_bytes?: number;
@@ -37,7 +37,7 @@ export function useImportProgress(csvImportId: number | null) {
     if (csvImportId == null) return;
 
     const sub = getConsumer().subscriptions.create(
-      { channel: "CsvImportChannel", csv_import_id: csvImportId },
+      { channel: "FileImportChannel", file_import_id: csvImportId },
       {
         received(data: ProgressEvent) {
           setEvents((prev) => [...prev, data]);

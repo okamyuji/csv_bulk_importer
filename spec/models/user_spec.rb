@@ -14,5 +14,5 @@ RSpec.describe User, type: :model do
     expect(dup.errors[:email]).to include(/taken/i)
   end
 
-  it { is_expected.to have_many(:csv_imports).dependent(:destroy) }
+  it { is_expected.to have_many(:file_imports).dependent(:destroy) }
 end

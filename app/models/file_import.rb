@@ -1,7 +1,7 @@
 # typed: true
 # frozen_string_literal: true
 
-class CsvImport < ApplicationRecord
+class FileImport < ApplicationRecord
   INPUT_KINDS = %w[csv binary].freeze
   CSV_TARGET_KINDS = %w[sales_record ledger_entry].freeze
   BINARY_TARGET_KINDS = %w[binary_asset].freeze
@@ -9,7 +9,7 @@ class CsvImport < ApplicationRecord
   STATUSES = %w[pending splitting processing completed completed_with_errors partially_failed failed].freeze
 
   belongs_to :user
-  has_many :csv_import_chunks, dependent: :destroy
+  has_many :file_import_chunks, dependent: :destroy
   has_many :sales_records, dependent: :nullify
   has_many :ledger_entries, dependent: :nullify
   has_one :binary_asset, dependent: :destroy
@@ -50,7 +50,7 @@ class CsvImport < ApplicationRecord
 
   # remaining_chunksをアトミックに1減らし、自分の呼び出しでカウンタが
   # 0に到達した場合だけtrueを返す。CsvChunkJobから呼び出して、
-  # CsvImportFinalizerJobをチャンクごとではなくインポートあたり1回だけ
+  # FileImportFinalizerJobをチャンクごとではなくインポートあたり1回だけ
   # 起動するために使う。
   #
   # 行ロックで並行デクリメントを直列化するため、at-least-once配信下でも

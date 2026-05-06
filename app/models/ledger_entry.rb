@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 class LedgerEntry < ApplicationRecord
-  belongs_to :csv_import, optional: true
+  belongs_to :file_import, optional: true
 
   validates :posted_on, :account_code, :idempotency_key, presence: true
   validates :idempotency_key, uniqueness: true

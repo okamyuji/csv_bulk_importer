@@ -10,10 +10,10 @@ module GeneratedUrlHelpersModule
   include ::ActionDispatch::Routing::PolymorphicRoutes
 
   sig { params(args: T.untyped).returns(String) }
-  def api_v1_csv_import_url(*args); end
+  def api_v1_file_import_url(*args); end
 
   sig { params(args: T.untyped).returns(String) }
-  def api_v1_csv_imports_url(*args); end
+  def api_v1_file_imports_url(*args); end
 
   sig { params(args: T.untyped).returns(String) }
   def api_v1_me_url(*args); end
@@ -127,7 +127,7 @@ module GeneratedUrlHelpersModule
   def rails_storage_redirect_url(*args); end
 
   sig { params(args: T.untyped).returns(String) }
-  def retry_api_v1_csv_import_url(*args); end
+  def retry_api_v1_file_import_url(*args); end
 
   sig { params(args: T.untyped).returns(String) }
   def root_url(*args); end

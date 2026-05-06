@@ -411,32 +411,32 @@ class SalesRecord
   end
 
   module GeneratedAssociationMethods
-    sig { params(args: T.untyped, blk: T.untyped).returns(::CsvImport) }
-    def build_csv_import(*args, &blk); end
+    sig { params(args: T.untyped, blk: T.untyped).returns(::FileImport) }
+    def build_file_import(*args, &blk); end
 
-    sig { params(args: T.untyped, blk: T.untyped).returns(::CsvImport) }
-    def create_csv_import(*args, &blk); end
+    sig { params(args: T.untyped, blk: T.untyped).returns(::FileImport) }
+    def create_file_import(*args, &blk); end
 
-    sig { params(args: T.untyped, blk: T.untyped).returns(::CsvImport) }
-    def create_csv_import!(*args, &blk); end
+    sig { params(args: T.untyped, blk: T.untyped).returns(::FileImport) }
+    def create_file_import!(*args, &blk); end
 
-    sig { returns(T.nilable(::CsvImport)) }
-    def csv_import; end
+    sig { returns(T.nilable(::FileImport)) }
+    def file_import; end
 
-    sig { params(value: T.nilable(::CsvImport)).void }
-    def csv_import=(value); end
-
-    sig { returns(T::Boolean) }
-    def csv_import_changed?; end
+    sig { params(value: T.nilable(::FileImport)).void }
+    def file_import=(value); end
 
     sig { returns(T::Boolean) }
-    def csv_import_previously_changed?; end
+    def file_import_changed?; end
 
-    sig { returns(T.nilable(::CsvImport)) }
-    def reload_csv_import; end
+    sig { returns(T::Boolean) }
+    def file_import_previously_changed?; end
+
+    sig { returns(T.nilable(::FileImport)) }
+    def reload_file_import; end
 
     sig { void }
-    def reset_csv_import; end
+    def reset_file_import; end
   end
 
   module GeneratedAssociationRelationMethods
@@ -680,49 +680,49 @@ class SalesRecord
     def created_at_will_change!; end
 
     sig { returns(::Integer) }
-    def csv_import_id; end
+    def file_import_id; end
 
     sig { params(value: ::Integer).returns(::Integer) }
-    def csv_import_id=(value); end
+    def file_import_id=(value); end
 
     sig { returns(T::Boolean) }
-    def csv_import_id?; end
+    def file_import_id?; end
 
     sig { returns(T.nilable(::Integer)) }
-    def csv_import_id_before_last_save; end
+    def file_import_id_before_last_save; end
 
     sig { returns(T.untyped) }
-    def csv_import_id_before_type_cast; end
+    def file_import_id_before_type_cast; end
 
     sig { returns(T::Boolean) }
-    def csv_import_id_came_from_user?; end
+    def file_import_id_came_from_user?; end
 
     sig { returns(T.nilable([::Integer, ::Integer])) }
-    def csv_import_id_change; end
+    def file_import_id_change; end
 
     sig { returns(T.nilable([::Integer, ::Integer])) }
-    def csv_import_id_change_to_be_saved; end
+    def file_import_id_change_to_be_saved; end
 
     sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
-    def csv_import_id_changed?(from: T.unsafe(nil), to: T.unsafe(nil)); end
+    def file_import_id_changed?(from: T.unsafe(nil), to: T.unsafe(nil)); end
 
     sig { returns(T.nilable(::Integer)) }
-    def csv_import_id_in_database; end
+    def file_import_id_in_database; end
 
     sig { returns(T.nilable([::Integer, ::Integer])) }
-    def csv_import_id_previous_change; end
+    def file_import_id_previous_change; end
 
     sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
-    def csv_import_id_previously_changed?(from: T.unsafe(nil), to: T.unsafe(nil)); end
+    def file_import_id_previously_changed?(from: T.unsafe(nil), to: T.unsafe(nil)); end
 
     sig { returns(T.nilable(::Integer)) }
-    def csv_import_id_previously_was; end
+    def file_import_id_previously_was; end
 
     sig { returns(T.nilable(::Integer)) }
-    def csv_import_id_was; end
+    def file_import_id_was; end
 
     sig { void }
-    def csv_import_id_will_change!; end
+    def file_import_id_will_change!; end
 
     sig { returns(::String) }
     def customer_code; end
@@ -1091,7 +1091,7 @@ class SalesRecord
     def restore_created_at!; end
 
     sig { void }
-    def restore_csv_import_id!; end
+    def restore_file_import_id!; end
 
     sig { void }
     def restore_customer_code!; end
@@ -1136,10 +1136,10 @@ class SalesRecord
     def saved_change_to_created_at?(from: T.unsafe(nil), to: T.unsafe(nil)); end
 
     sig { returns(T.nilable([::Integer, ::Integer])) }
-    def saved_change_to_csv_import_id; end
+    def saved_change_to_file_import_id; end
 
     sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
-    def saved_change_to_csv_import_id?(from: T.unsafe(nil), to: T.unsafe(nil)); end
+    def saved_change_to_file_import_id?(from: T.unsafe(nil), to: T.unsafe(nil)); end
 
     sig { returns(T.nilable([::String, ::String])) }
     def saved_change_to_customer_code; end
@@ -1298,7 +1298,7 @@ class SalesRecord
     def will_save_change_to_created_at?(from: T.unsafe(nil), to: T.unsafe(nil)); end
 
     sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
-    def will_save_change_to_csv_import_id?(from: T.unsafe(nil), to: T.unsafe(nil)); end
+    def will_save_change_to_file_import_id?(from: T.unsafe(nil), to: T.unsafe(nil)); end
 
     sig { params(from: T.untyped, to: T.untyped).returns(T::Boolean) }
     def will_save_change_to_customer_code?(from: T.unsafe(nil), to: T.unsafe(nil)); end

@@ -2,10 +2,10 @@
 
 require "rails_helper"
 
-RSpec.describe CsvImportPolicy do
+RSpec.describe FileImportPolicy do
   let(:owner) { create(:user) }
   let(:other) { create(:user) }
-  let(:record) { create(:csv_import, user: owner) }
+  let(:record) { create(:file_import, user: owner) }
 
   it "allows the owner to view and retry" do
     expect(described_class.new(owner, record).show?).to be true
@@ -18,9 +18,9 @@ RSpec.describe CsvImportPolicy do
   end
 
   it "limits Scope to the current user's records" do
-    mine = create(:csv_import, user: owner)
-    _theirs = create(:csv_import, user: other)
-    scope = described_class::Scope.new(owner, CsvImport).resolve
+    mine = create(:file_import, user: owner)
+    _theirs = create(:file_import, user: other)
+    scope = described_class::Scope.new(owner, FileImport).resolve
     expect(scope).to contain_exactly(mine, record)
   end
 end

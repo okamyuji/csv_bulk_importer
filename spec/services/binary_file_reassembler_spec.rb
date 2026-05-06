@@ -6,9 +6,9 @@ RSpec.describe BinaryFileReassembler do
   let(:user) { create(:user) }
   let(:source_bytes) { "aaabbbbcc".b }
   let(:source_checksum) { Digest::SHA256.hexdigest(source_bytes) }
-  let(:csv_import) do
+  let(:file_import) do
     create(
-      :csv_import,
+      :file_import,
       user: user,
       input_kind: "binary",
       target_kind: "binary_asset",
@@ -24,7 +24,7 @@ RSpec.describe BinaryFileReassembler do
 
   def make_chunk(index, bytes, start_byte:)
     chunk =
-      csv_import.csv_import_chunks.create!(
+      file_import.file_import_chunks.create!(
         chunk_index: index,
         status: "completed",
         start_byte: start_byte,
@@ -41,29 +41,29 @@ RSpec.describe BinaryFileReassembler do
     make_chunk(0, "aaa", start_byte: 0)
     make_chunk(1, "bbbb", start_byte: 3)
 
-    result = described_class.call(csv_import: csv_import, bucket: AppS3.bucket, s3_client: AppS3.client)
+    result = described_class.call(file_import: file_import, bucket: AppS3.bucket, s3_client: AppS3.client)
     body = AppS3.client.get_object(bucket: AppS3.bucket, key: result.s3_key).body.read
 
     expect(body).to eq(source_bytes)
     expect(result.checksum).to eq(source_checksum)
-    expect(result.s3_key).to end_with("/reassembled/reassembled-#{csv_import.id}.bin")
+    expect(result.s3_key).to end_with("/reassembled/reassembled-#{file_import.id}.bin")
   end
 
   it "rejects checksum mismatches" do
-    csv_import.update!(source_checksum: Digest::SHA256.hexdigest("different"), total_chunks: 1)
+    file_import.update!(source_checksum: Digest::SHA256.hexdigest("different"), total_chunks: 1)
     make_chunk(0, source_bytes, start_byte: 0)
 
     expect {
-      described_class.call(csv_import: csv_import, bucket: AppS3.bucket, s3_client: AppS3.client)
+      described_class.call(file_import: file_import, bucket: AppS3.bucket, s3_client: AppS3.client)
     }.to raise_error(BinaryFileReassembler::ChecksumMismatch)
   end
 
   it "rejects missing source checksums" do
-    csv_import.update!(source_checksum: nil, total_chunks: 1)
+    file_import.update!(source_checksum: nil, total_chunks: 1)
     make_chunk(0, source_bytes, start_byte: 0)
 
     expect {
-      described_class.call(csv_import: csv_import, bucket: AppS3.bucket, s3_client: AppS3.client)
+      described_class.call(file_import: file_import, bucket: AppS3.bucket, s3_client: AppS3.client)
     }.to raise_error(BinaryFileReassembler::MissingSourceChecksum)
   end
 
@@ -72,7 +72,7 @@ RSpec.describe BinaryFileReassembler do
     make_chunk(2, "cc", start_byte: 7)
 
     expect {
-      described_class.call(csv_import: csv_import, bucket: AppS3.bucket, s3_client: AppS3.client)
+      described_class.call(file_import: file_import, bucket: AppS3.bucket, s3_client: AppS3.client)
     }.to raise_error(ArgumentError, /expected 3 chunks/)
   end
 
@@ -82,7 +82,7 @@ RSpec.describe BinaryFileReassembler do
     make_chunk(2, "cc", start_byte: 8)
 
     expect {
-      described_class.call(csv_import: csv_import, bucket: AppS3.bucket, s3_client: AppS3.client)
+      described_class.call(file_import: file_import, bucket: AppS3.bucket, s3_client: AppS3.client)
     }.to raise_error(ArgumentError, /byte ranges/)
   end
 end

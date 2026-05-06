@@ -12,12 +12,12 @@ class BinaryChunkJob < ApplicationJob
     chunk = mark_processing!(chunk_id)
     return unless chunk
 
-    Current.csv_import_id = chunk.csv_import_id
-    csv_import = T.must(chunk.csv_import)
+    Current.file_import_id = chunk.file_import_id
+    file_import = T.must(chunk.file_import)
 
     checksum = checksum_for(chunk)
-    CsvImportChunk.transaction do
-      chunk = CsvImportChunk.lock.find(chunk_id)
+    FileImportChunk.transaction do
+      chunk = FileImportChunk.lock.find(chunk_id)
       chunk.update!(status: "completed", processed_rows: 0, failed_rows: 0, checksum: checksum, error_details: nil)
     end
 
@@ -28,18 +28,18 @@ class BinaryChunkJob < ApplicationJob
       byte_size: chunk.byte_size,
     )
 
-    CsvImportChannel.broadcast_chunk_completed(chunk)
-    # CsvImportFinalizerJobは「全チャンクがterminal状態か」と「BinaryAssetが既に
+    FileImportChannel.broadcast_chunk_completed(chunk)
+    # FileImportFinalizerJobは「全チャンクがterminal状態か」と「BinaryAssetが既に
     # completedか」を自前で確認するため、チャンクごとの冪等enqueueで安全に動作する。
     # 失敗チャンクが remaining_chunks を減らさない問題を抱えないよう、binary側は
     # finish_one_chunk! のカウンタに依存せず、常にFinalizerをenqueueする。
-    CsvImportFinalizerJob.perform_later(csv_import.id)
+    FileImportFinalizerJob.perform_later(file_import.id)
   rescue ActiveRecord::RecordNotFound
     raise
   rescue StandardError => e
-    csv_import_id = chunk&.csv_import_id
+    file_import_id = chunk&.file_import_id
 
-    CsvImportChunk.where(id: chunk_id).update_all(
+    FileImportChunk.where(id: chunk_id).update_all(
       status: "failed",
       error_details: [{ fatal: e.message }],
       retry_count: (chunk&.retry_count.to_i) + 1,
@@ -53,15 +53,15 @@ class BinaryChunkJob < ApplicationJob
     # 再試行が残っている間はFinalizerを起動しない。最終リトライで初めてチャンクが
     # 「永続的失敗」とみなせるため、ここでだけ直接enqueueする（finish_one_chunk!を
     # rescueから呼ぶと、retry中の一時的失敗まで残数を減らしてしまうため避ける）。
-    CsvImportFinalizerJob.perform_later(csv_import_id) if csv_import_id && final_retry_attempt?
+    FileImportFinalizerJob.perform_later(file_import_id) if file_import_id && final_retry_attempt?
     raise
   end
 
   private
 
   def mark_processing!(chunk_id)
-    CsvImportChunk.transaction do
-      chunk = CsvImportChunk.lock.find(chunk_id)
+    FileImportChunk.transaction do
+      chunk = FileImportChunk.lock.find(chunk_id)
       return nil if chunk.completed?
 
       chunk.update!(status: "processing")

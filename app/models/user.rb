@@ -11,5 +11,5 @@ class User < ApplicationRecord
 
   validates :name, presence: true, length: { maximum: 50 }
 
-  has_many :csv_imports, dependent: :destroy
+  has_many :file_imports, dependent: :destroy
 end

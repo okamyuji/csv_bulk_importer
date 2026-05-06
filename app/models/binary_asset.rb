@@ -4,7 +4,7 @@
 class BinaryAsset < ApplicationRecord
   STATUSES = %w[pending completed partially_failed failed].freeze
 
-  belongs_to :csv_import
+  belongs_to :file_import
 
   validates :file_name, :content_type, :checksum, :idempotency_key, presence: true
   validates :byte_size, numericality: { greater_than: 0 }

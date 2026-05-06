@@ -65,7 +65,7 @@ class UploadFileClassifier
   end
 
   def valid_csv_header?
-    return false unless CsvImport::CSV_TARGET_KINDS.include?(target_kind)
+    return false unless FileImport::CSV_TARGET_KINDS.include?(target_kind)
 
     file.tempfile.rewind
     header = file.tempfile.gets
@@ -82,7 +82,7 @@ class UploadFileClassifier
 
   def csv_header_mismatch_message
     expected =
-      if CsvImport::CSV_TARGET_KINDS.include?(target_kind)
+      if FileImport::CSV_TARGET_KINDS.include?(target_kind)
         CsvRowMapper.expected_headers(target_kind).join(",")
       else
         "a supported CSV target"
@@ -99,9 +99,9 @@ class UploadFileClassifier
   def validate_target_kind!(result)
     valid =
       if result.input_kind == "csv"
-        CsvImport::CSV_TARGET_KINDS.include?(target_kind)
+        FileImport::CSV_TARGET_KINDS.include?(target_kind)
       else
-        CsvImport::BINARY_TARGET_KINDS.include?(target_kind)
+        FileImport::BINARY_TARGET_KINDS.include?(target_kind)
       end
     raise UnsupportedFileType, "invalid target_kind for #{result.input_kind}: #{target_kind.inspect}" unless valid
   end

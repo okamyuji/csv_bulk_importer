@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :binary_asset do
-    association :csv_import, input_kind: "binary", target_kind: "binary_asset"
+    association :file_import, input_kind: "binary", target_kind: "binary_asset"
     file_name { "image.png" }
     content_type { "image/png" }
     byte_size { 10 }

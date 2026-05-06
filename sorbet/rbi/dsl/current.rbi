@@ -10,10 +10,10 @@ class Current
 
   class << self
     sig { returns(T.untyped) }
-    def csv_import_id; end
+    def file_import_id; end
 
     sig { params(value: T.untyped).returns(T.untyped) }
-    def csv_import_id=(value); end
+    def file_import_id=(value); end
 
     sig { returns(T.untyped) }
     def request_id; end
@@ -30,10 +30,10 @@ class Current
 
   module GeneratedAttributeMethods
     sig { returns(T.untyped) }
-    def csv_import_id; end
+    def file_import_id; end
 
     sig { params(value: T.untyped).returns(T.untyped) }
-    def csv_import_id=(value); end
+    def file_import_id=(value); end
 
     sig { returns(T.untyped) }
     def request_id; end

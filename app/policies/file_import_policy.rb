@@ -1,7 +1,7 @@
 # typed: true
 # frozen_string_literal: true
 
-class CsvImportPolicy < ApplicationPolicy
+class FileImportPolicy < ApplicationPolicy
   def index?
     user.present?
   end

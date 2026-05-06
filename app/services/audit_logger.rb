@@ -8,7 +8,7 @@ require "json"
 # and NEVER contains CSV row data, passwords, or raw JWTs.
 #
 # Example line:
-#   AUDIT {"event":"csv_import.created","user_id":7,"csv_import_id":42, ... }
+#   AUDIT {"event":"file_import.created","user_id":7,"file_import_id":42, ... }
 class AuditLogger
   REDACTED = "[REDACTED]"
 
@@ -24,7 +24,7 @@ class AuditLogger
     private
 
     def base_context
-      { request_id: Current.request_id, user_id: Current.user_id, csv_import_id: Current.csv_import_id }.compact
+      { request_id: Current.request_id, user_id: Current.user_id, file_import_id: Current.file_import_id }.compact
     end
 
     # Allowlist-style sanitization. Reject nested CSV rows, long strings, binary,

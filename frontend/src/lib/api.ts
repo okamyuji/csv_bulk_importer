@@ -45,7 +45,7 @@ export interface User {
   name: string;
 }
 
-export interface CsvImport {
+export interface FileImport {
   id: number;
   file_name: string;
   input_kind: "csv" | "binary";
@@ -71,9 +71,9 @@ export interface CsvImport {
   updated_at: string;
 }
 
-export interface CsvImportChunk {
+export interface FileImportChunk {
   id: number;
-  csv_import_id: number;
+  file_import_id: number;
   chunk_index: number;
   start_row: number;
   end_row: number;
@@ -136,12 +136,12 @@ export const api = {
   },
 
   listImports() {
-    return request<{ data: CsvImport[] }>("/csv_imports");
+    return request<{ data: FileImport[] }>("/file_imports");
   },
 
   getImport(id: number) {
-    return request<{ data: CsvImport; chunks: CsvImportChunk[] }>(
-      `/csv_imports/${id}`,
+    return request<{ data: FileImport; chunks: FileImportChunk[] }>(
+      `/file_imports/${id}`,
     );
   },
 
@@ -151,14 +151,14 @@ export const api = {
     input_kind: "csv" | "binary",
     onProgress?: (pct: number) => void,
   ) {
-    return new Promise<{ data: CsvImport }>((resolve, reject) => {
+    return new Promise<{ data: FileImport }>((resolve, reject) => {
       const form = new FormData();
       form.append("file", file);
       form.append("target_kind", target_kind);
       form.append("input_kind", input_kind);
 
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${API_BASE}/csv_imports`);
+      xhr.open("POST", `${API_BASE}/file_imports`);
       if (accessToken)
         xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
       xhr.upload.onprogress = (e) => {
@@ -176,7 +176,7 @@ export const api = {
   },
 
   retryImport(id: number) {
-    return request<{ retried: number }>(`/csv_imports/${id}/retry`, {
+    return request<{ retried: number }>(`/file_imports/${id}/retry`, {
       method: "POST",
     });
   },
