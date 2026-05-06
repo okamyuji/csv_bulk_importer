@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# typed: ignore
 # frozen_string_literal: true
 
 # DHI distroless ランタイム用の Puma 起動ランチャ。
@@ -9,4 +10,4 @@ ENV["BUNDLE_GEMFILE"] ||= File.expand_path("../Gemfile", __dir__)
 require "bundler/setup"
 require "puma/cli"
 
-Puma::CLI.new(["-C", "config/puma.rb"]).run
+Puma::CLI.new(%w[-C config/puma.rb]).run
