@@ -1,14 +1,22 @@
-# Solid Queue 自体もディスパッチャ・ワーカーのポーリングで DB コネクションを別途消費する。
-# 接続枯渇を避けるため、database.yml の pool は (threads + 1) * processes 以上を目安にする。
-# 例: threads=5, processes=3 のときは pool >= 18 を確保する。
+<%
+require Rails.root.join("lib/cpu_concurrency").to_s
+%># Solid Queue の並列度は CpuConcurrency (lib/cpu_concurrency.rb) が
+# CPU 数 (cgroup quota 優先) から自動算出する。ECS Fargate の vCPU 設定や
+# ローカル PC のコア数を反映するため、本番/開発で同じ式が動く。
+#
+# 上書きする ENV:
+#   JOB_THREADS      : 1 ワーカープロセスあたりのスレッド数
+#   JOB_CONCURRENCY  : ワーカープロセス数
+#
+# DB 接続枯渇を避けるため database.yml の pool は CpuConcurrency.db_pool を使う。
 default: &default
   dispatchers:
     - polling_interval: 1
       batch_size: 500
   workers:
     - queues: "*"
-      threads: 3
-      processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+      threads: <%= CpuConcurrency.job_threads %>
+      processes: <%= CpuConcurrency.job_processes %>
       polling_interval: 0.1
 
 development:

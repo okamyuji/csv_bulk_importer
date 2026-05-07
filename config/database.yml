@@ -1,8 +1,12 @@
-default: &default
+<%
+require Rails.root.join("lib/cpu_concurrency").to_s
+%>default: &default
   adapter: mysql2
   encoding: utf8mb4
   collation: utf8mb4_0900_ai_ci
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 15 } %>
+  # CPU 数 (cgroup quota 優先) から Solid Queue / Puma 双方を満たす pool を自動算出。
+  # ENV DB_POOL / RAILS_MAX_THREADS で上書き可能。
+  pool: <%= CpuConcurrency.db_pool %>
   username: <%= ENV.fetch("DB_USERNAME") { "root" } %>
   password: <%= ENV.fetch("DB_PASSWORD") { "password" } %>
   host:     <%= ENV.fetch("DB_HOST") { "127.0.0.1" } %>

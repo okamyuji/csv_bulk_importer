@@ -70,8 +70,8 @@ Rails.application.configure do
   config.action_cable.disable_request_forgery_protection = true
   config.action_cable.allowed_request_origins = [%r{http://localhost:\d+}, %r{http://127\.0\.0\.1:\d+}]
 
-  # Store ActiveStorage in LocalStack-backed S3.
-  config.active_storage.service = :amazon_localstack
+  # Store ActiveStorage in MinIO-backed S3 (S3 互換、本番と同じ ActiveStorage::Service::S3 経路).
+  config.active_storage.service = :amazon_minio
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true

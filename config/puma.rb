@@ -25,8 +25,17 @@
 # Any libraries that use a connection pool or another resource pool should
 # be configured to provide at least as many connections as the number of
 # threads. This includes Active Record's `pool` parameter in `database.yml`.
-threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
+require_relative "../lib/cpu_concurrency"
+
+# CpuConcurrency が CPU 数 (cgroup quota 優先) から最適スレッド数を算出する。
+# ENV RAILS_MAX_THREADS で上書き可能。
+threads_count = CpuConcurrency.puma_threads
 threads threads_count, threads_count
+
+# WEB_CONCURRENCY が未設定なら CpuConcurrency.cpus - 1 を使う (最低 1)。
+if ENV["WEB_CONCURRENCY"]
+  workers Integer(ENV.fetch("WEB_CONCURRENCY"))
+end
 
 # `bind` で 0.0.0.0:PORT に明示バインドする。
 # DHI 移行ガイドのとおり `port` と `bind` を両方書くと同一ポートに 2 重バインドし

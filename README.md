@@ -16,7 +16,7 @@ CSVは行単位でチャンク分割してDBへupsertし、バイナリは8MB単
 | データベース | MySQL 8.0（開発環境はDockerコンテナ、本番はAurora MySQL） |
 | ジョブキュー | Solid Queue（Rails 8の標準機能） |
 | リアルタイム通信 | Solid Cable（ActionCable） |
-| ファイルストレージ | ActiveStorageとaws-sdk-s3を併用してS3へ保存します（開発環境ではLocalStackを使用します。バイナリはS3 Multipart Upload Copyで再結合します） |
+| ファイルストレージ | ActiveStorageとaws-sdk-s3を併用してS3へ保存します（開発環境ではS3互換のMinIOを使用します。バイナリはS3 Multipart Upload Copyで再結合します） |
 | ファイル分類 | Marcel + 拡張子チェックでCSVとバイナリを判別し、CSVはヘッダ整合性も検証します |
 | フロントエンド | Vite 7 + React 19 + TypeScript + Tailwind CSS v4 + react-dropzone |
 | 認証 | DeviseとDevise-JWTを組み合わせたBearerトークン認証です（トランザクションでJWT発行失敗時のorphan accountを防止しています） |
@@ -52,7 +52,7 @@ make setup
 # Rubyの依存パッケージをインストールします
 bundle install
 
-# LocalStackコンテナを起動します（S3互換のストレージとして使用します）
+# MinIOコンテナを起動します（S3互換のストレージとして使用します）
 docker compose up -d
 
 # データベースを作成し、マイグレーションを実行します
@@ -87,8 +87,8 @@ make dev
 | `make lint` | RuboCopとESLintのみを実行します |
 | `make typecheck` | SorbetとTypeScriptの型検査を実行します |
 | `make format` | RubyファイルをSyntax Treeで、JS/TSファイルをPrettierで自動整形します |
-| `make up` | LocalStackのDockerコンテナを起動します |
-| `make down` | LocalStackのDockerコンテナを停止します |
+| `make up` | MinIO（S3互換）のDockerコンテナを起動します |
+| `make down` | MinIO（S3互換）のDockerコンテナを停止します |
 | `make migrate` | データベースマイグレーションを実行します |
 | `make console` | Railsコンソールを開きます |
 | `make build` | 本番用のDockerイメージ（webとworker）をビルドします |
@@ -110,7 +110,7 @@ make dev
 
 ### CSVインポート
 
-- CsvChunkSplitterがファイルを500行単位でS3へ分割アップロードします
+- CsvChunkSplitterがファイルを2000行単位でS3へ分割アップロードします
 - CsvChunkJobがS3からチャンクを取得し、CsvRowMapperが各行の型変換とバリデーションを実施、ActiveRecordモデルの`valid?`で整合性を検証します
 - 有効な行のみを100件ずつ`upsert_all`でデータベースに投入します
 - ファイルあたりの`idempotency_key`（SHA256）と各行の冪等キーで、ジョブ再実行時のレコード重複を防止します
@@ -180,31 +180,59 @@ make quality
 
 ## ベンチマークの実行方法
 
-`lib/tasks/file_import_benchmark.rake`に、合成CSVを生成して`FileImportJob`をinline実行する計測タスクを用意しています。LocalStack（S3）とMySQLが起動している前提で、以下のコマンドで再現できます。
+実サーバ + 実 Solid Queue ワーカーでアップロードからインポート完了までの時間とプロセス RSS を計測します。`script/bench/` 配下のスクリプトが、合成 CSV/画像の生成、API 経由のアップロード、ステータスポーリング、Worker と Puma のメモリピーク取得を一括で行います。
+
+### 前提
+
+- `make setup` 済み（MinIO + MySQL コンテナ起動、`bin/rails db:prepare` 完了）
+- `make dev` で Rails / Solid Queue / Vite が起動している
+
+### 一括実行
 
 ```bash
-docker compose up -d
-bin/rails db:prepare
-
-# 10万行
-SERVICE_TYPE=amazon_localstack ACTIVE_STORAGE_SERVICE=amazon_localstack \
-  bundle exec rake "file_import:benchmark[100000]"
-
-# 100万行（LocalStackのCRC32検証を回避するため環境変数を追加）
-SERVICE_TYPE=amazon_localstack ACTIVE_STORAGE_SERVICE=amazon_localstack \
-AWS_REQUEST_CHECKSUM_CALCULATION=when_required \
-AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \
-  bundle exec rake "file_import:benchmark[1000000]"
+script/bench/run.sh all
 ```
 
-タスクは以下の項目を出力します。
+ベンチユーザー (`bench@example.com / Password1!`) を自動で `registrations` 経由で作成し、JWT を `tmp/bench/token.txt` に保存します。続けて 4 ケース（10 万行 CSV、100 万行 CSV、5MB 画像、300MB 画像）を順に実行し、結果を `tmp/bench/results/result_<label>.txt` に書き出してから `script/bench/summarize.rb` でレポートを表示します。
 
-- 合計時間とスループット（行/秒）
-- 開始時と終了時のRSS（メガバイト単位）
-- `ActiveJob.perform_all_later`の呼び出し回数（チャンク数によらず1回）
-- `FileImportFinalizerJob.perform_later`の呼び出し回数（インポート1件あたり1回）
+### 個別ケース
 
-inline adapterによる完全直列実行のため、Solid Queueでthreads/processesを増やしたときの並列化効果は別途計測してください。
+```bash
+script/bench/run.sh csv_100k
+script/bench/run.sh csv_1m
+script/bench/run.sh img_small
+script/bench/run.sh img_large
+```
+
+### 環境変数
+
+| 変数 | 既定値 | 用途 |
+|---|---|---|
+| `BENCH_BASE` | `http://localhost:3000` | API ベース URL |
+| `BENCH_OUT` | `tmp/bench/results` | 結果ファイル出力先 |
+| `BENCH_DATA` | `tmp/bench` | 合成データ・トークン保存先 |
+| `BENCH_TOKEN` | (未設定) | 既存 JWT を直接渡したいとき |
+| `BENCH_USER_EMAIL` / `BENCH_USER_PASSWORD` | `bench@example.com` / `Password1!` | ベンチユーザー |
+
+### 出力フォーマット
+
+`summarize.rb` は各ケースについて次を出します。
+
+- アップロード時間 / 分割時間 / DB 投入（または再結合）時間 / 全体時間
+- 失敗行 or 失敗バイト
+- DB 投入件数 / チャンク数
+- Worker と Puma の RSS（before / peak / after / delta）
+- スループット（CSV は行/秒、バイナリは MB/秒）
+
+### ベンチデータと合成器
+
+| スクリプト | 役割 |
+|---|---|
+| `script/bench/gen_csv.rb`   | sales_record 用の妥当な CSV を任意行数で生成 |
+| `script/bench/gen_image.rb` | Marcel が JPEG として認識する任意サイズのバイナリを生成 |
+| `script/bench/run_one.sh`   | 1 ケース分のアップロード + RSS サンプリング + 結果ファイル書き出し |
+| `script/bench/run.sh`       | データ準備 + トークン取得 + 全ケース実行 + 集計 |
+| `script/bench/summarize.rb` | DB の FileImport / chunks と結果ファイルを突き合わせて整形 |
 
 ## 本番イメージのビルド方法
 

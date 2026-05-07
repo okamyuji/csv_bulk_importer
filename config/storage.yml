@@ -2,16 +2,15 @@ test:
   service: Disk
   root: <%= Rails.root.join("tmp/storage") %>
 
-local:
-  service: Disk
-  root: <%= Rails.root.join("storage") %>
-
-amazon_localstack:
+# 開発環境は S3 互換の MinIO を docker-compose で立てて使う。
+# 本番(Aurora MySQL + S3)と同じ ActiveStorage S3 service を通す事で
+# Multipart Upload や CRC32 チェックサム検証も含めて挙動が一致する。
+amazon_minio:
   service: S3
   endpoint: <%= ENV.fetch("S3_ENDPOINT", "http://localhost:4566") %>
   force_path_style: true
   access_key_id: <%= ENV.fetch("AWS_ACCESS_KEY_ID", "test") %>
-  secret_access_key: <%= ENV.fetch("AWS_SECRET_ACCESS_KEY", "test") %>
+  secret_access_key: <%= ENV.fetch("AWS_SECRET_ACCESS_KEY", "testtest1234") %>
   region: <%= ENV.fetch("AWS_REGION", "us-east-1") %>
   bucket: <%= ENV.fetch("S3_BUCKET", "bulk-file-importer-dev") %>
 

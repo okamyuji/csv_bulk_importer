@@ -1,11 +1,14 @@
 # typed: true
 # frozen_string_literal: true
 
-# Streams a CSV from an IO and uploads 500-row chunks to S3.
+# Streams a CSV from an IO and uploads CHUNK_SIZE-row chunks to S3.
 # Accepts any IO that responds to `gets` and `each_line`
 # so callers can pass File, Tempfile, or StringIO.
 class CsvChunkSplitter
-  CHUNK_SIZE = 500
+  # 1チャンクあたりの行数。チャンク数が増えるほど Solid Queue ジョブの enqueue/poll
+  # オーバーヘッドが支配的になり、500 行では 1M 行で 2,000 チャンクになって律速していた。
+  # 2,000 行/チャンクに上げて 100 万行 → 500 チャンクに圧縮する。
+  CHUNK_SIZE = 2000
 
   Chunk = Data.define(:index, :start_row, :end_row, :s3_key, :byte_size)
   Result = Data.define(:total_rows, :total_chunks, :chunks)
